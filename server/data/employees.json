@@ -1,0 +1,29 @@
+[
+  {
+    "id": 1,
+    "name": "Aditi Sharma",
+    "email": "aditi.sharma@example.com",
+    "department": "Human Resources",
+    "position": "HR Manager",
+    "joinDate": "2021-03-15",
+    "status": "Active"
+  },
+  {
+    "id": 2,
+    "name": "Rohan Mehta",
+    "email": "rohan.mehta@example.com",
+    "department": "Engineering",
+    "position": "Software Engineer",
+    "joinDate": "2022-07-01",
+    "status": "Active"
+  },
+  {
+    "id": 3,
+    "name": "Priya Nair",
+    "email": "priya.nair@example.com",
+    "department": "Finance",
+    "position": "Accountant",
+    "joinDate": "2020-11-20",
+    "status": "On Leave"
+  }
+]
