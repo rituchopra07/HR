@@ -1,0 +1,1490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Workforce Register</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --ink:#16233A;
+    --ink-2:#51617A;
+    --paper:#EDF1EF;
+    --surface:#FFFFFF;
+    --surface-2:#F4F7F5;
+    --line:#DAE1DE;
+    --accent:#B8862E;
+    --accent-contrast:#FFFFFF;
+    --cat-2:#0E8A78;
+    --cat-3:#2A5FAE;
+    --cat-4:#A8397E;
+    --good:#2F7D52;
+    --warning:#BD6A1F;
+    --serious:#C2542A;
+    --critical:#B23A2E;
+    --seq-1:#F3E4C4;
+    --seq-2:#E0C68B;
+    --seq-3:#CBA35A;
+    --seq-4:#B8862E;
+    --shadow: 0 1px 2px rgba(22,35,58,.06), 0 6px 20px -8px rgba(22,35,58,.12);
+    --radius: 10px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ink:#E8ECEE;
+      --ink-2:#9FB0BD;
+      --paper:#111922;
+      --surface:#17212C;
+      --surface-2:#1D2833;
+      --line:#2B3742;
+      --accent:#BE8A3A;
+      --accent-contrast:#12181F;
+      --cat-2:#1F9A82;
+      --cat-3:#5488D9;
+      --cat-4:#C85E9C;
+      --good:#4C9A6B;
+      --warning:#D08A3E;
+      --serious:#D2704A;
+      --critical:#D0685C;
+      --seq-1:#3A3222;
+      --seq-2:#5C4B29;
+      --seq-3:#8C6C30;
+      --seq-4:#BE8A3A;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 26px -10px rgba(0,0,0,.5);
+    }
+  }
+  :root[data-theme="dark"]{
+    --ink:#E8ECEE;
+    --ink-2:#9FB0BD;
+    --paper:#111922;
+    --surface:#17212C;
+    --surface-2:#1D2833;
+    --line:#2B3742;
+    --accent:#BE8A3A;
+    --accent-contrast:#12181F;
+    --cat-2:#1F9A82;
+    --cat-3:#5488D9;
+    --cat-4:#C85E9C;
+    --good:#4C9A6B;
+    --warning:#D08A3E;
+    --serious:#D2704A;
+    --critical:#D0685C;
+    --seq-1:#3A3222;
+    --seq-2:#5C4B29;
+    --seq-3:#8C6C30;
+    --seq-4:#BE8A3A;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 26px -10px rgba(0,0,0,.5);
+  }
+
+  *{ box-sizing:border-box; }
+  body{
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:"Public Sans", -apple-system, Segoe UI, sans-serif;
+    font-size:14px; line-height:1.5;
+  }
+  h1,h2,h3{ font-family:"Fraunces", Georgia, serif; text-wrap:balance; margin:0; }
+  .mono{ font-family:"IBM Plex Mono", ui-monospace, monospace; }
+  .tnum{ font-variant-numeric: tabular-nums; }
+
+  .app{ display:grid; grid-template-columns: 250px 1fr; min-height:100vh; }
+  @media (max-width: 880px){ .app{ grid-template-columns: 1fr; } .rail{ position:static !important; } }
+
+  /* ---------- Rail ---------- */
+  .rail{
+    background:var(--surface); border-right:1px solid var(--line);
+    padding:22px 18px; display:flex; flex-direction:column; gap:22px;
+    position:sticky; top:0; height:100vh; overflow-y:auto;
+  }
+  .crest{ display:flex; align-items:center; gap:10px; }
+  .crest svg{ flex:none; }
+  .wordmark{ font-family:"Fraunces", serif; font-weight:600; font-size:15.5px; line-height:1.22; }
+  .wordmark small{ display:block; font-family:"Public Sans"; font-weight:600; font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-2); margin-top:2px; }
+
+  .tabs{ display:flex; flex-direction:column; gap:2px; }
+  .tab-btn{
+    all:unset; cursor:pointer; padding:10px 12px; border-radius:7px;
+    font-family:"Public Sans"; font-weight:600; font-size:12.5px; color:var(--ink-2);
+    display:flex; align-items:baseline; gap:8px;
+  }
+  .tab-btn .n{ font-family:"IBM Plex Mono"; font-size:11px; color:var(--ink-2); opacity:.7; }
+  .tab-btn:hover{ background:var(--surface-2); }
+  .tab-btn.active{ background:var(--surface-2); color:var(--ink); box-shadow: inset 2px 0 0 var(--accent); }
+  .tab-btn.active .n{ color:var(--accent); opacity:1; }
+
+  .rail-block{ display:flex; flex-direction:column; gap:8px; }
+  .rail-label{ font-size:10.5px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--ink-2); }
+  .filters{ display:flex; flex-direction:column; gap:10px; }
+  .filters label{ display:flex; flex-direction:column; gap:4px; font-size:12px; color:var(--ink-2); font-weight:600; }
+  select{
+    font:inherit; font-family:"Public Sans"; font-size:12.5px; color:var(--ink);
+    background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:7px 8px;
+  }
+  select:focus-visible, button:focus-visible, summary:focus-visible, input:focus-visible{
+    outline:2px solid var(--cat-3); outline-offset:2px;
+  }
+
+  details.gloss{ font-size:12px; }
+  details.gloss summary{ cursor:pointer; font-weight:600; color:var(--ink-2); list-style:none; display:flex; align-items:center; gap:6px; }
+  details.gloss summary::-webkit-details-marker{ display:none; }
+  details.gloss summary .ico{ width:14px; height:14px; border-radius:50%; border:1.4px solid var(--ink-2); display:inline-flex; align-items:center; justify-content:center; font-size:9.5px; font-weight:700; }
+  .gloss-list{ margin-top:8px; display:flex; flex-direction:column; gap:6px; padding:10px; background:var(--surface-2); border-radius:8px; }
+  .gloss-list div{ display:flex; justify-content:space-between; gap:8px; }
+  .gloss-list b{ font-family:"IBM Plex Mono"; font-size:11px; }
+  .gloss-list span{ color:var(--ink-2); font-size:11.5px; text-align:right; }
+
+  .rail-footer{ margin-top:auto; font-size:11px; color:var(--ink-2); }
+
+  /* ---------- Main ---------- */
+  .content{ padding:26px 30px 60px; max-width:1180px; }
+  .letterhead{
+    display:flex; justify-content:space-between; align-items:flex-end; gap:16px;
+    padding-bottom:16px; border-bottom:2px solid var(--ink); margin-bottom:22px; flex-wrap:wrap;
+  }
+  .eyebrow{ font-size:11px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--accent); margin:0 0 6px; }
+  .letterhead h1{ font-size:30px; font-weight:600; }
+  .notes-switch{ display:flex; align-items:center; gap:8px; font-size:12px; font-weight:600; color:var(--ink-2); }
+  .switch{ position:relative; width:34px; height:19px; flex:none; }
+  .switch input{ opacity:0; width:100%; height:100%; margin:0; position:absolute; cursor:pointer; }
+  .switch .track{ position:absolute; inset:0; background:var(--line); border-radius:99px; transition:background .15s; }
+  .switch .knob{ position:absolute; top:2px; left:2px; width:15px; height:15px; border-radius:50%; background:var(--surface); box-shadow:var(--shadow); transition:transform .15s; }
+  .switch input:checked + .track{ background:var(--accent); }
+  .switch input:checked ~ .knob{ transform:translateX(15px); }
+
+  .tab-panel{ display:none; }
+  .tab-panel.active{ display:block; }
+
+  /* KPIs */
+  .kpi-row{ display:grid; grid-template-columns:repeat(auto-fit, minmax(150px,1fr)); gap:12px; margin-bottom:20px; }
+  .kpi{ background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:16px 16px 14px; box-shadow:var(--shadow); position:relative; }
+  .kpi .lbl{ font-size:10.5px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:var(--ink-2); margin-bottom:8px; }
+  .kpi .val{ font-family:"Fraunces"; font-weight:600; font-size:28px; line-height:1; }
+  .kpi .sub{ margin-top:7px; font-size:11.5px; color:var(--ink-2); display:flex; align-items:center; gap:5px; }
+  .kpi .sub.good{ color:var(--good); font-weight:700; }
+  .kpi .sub.warn{ color:var(--warning); font-weight:700; }
+
+  /* Chart grid & cards */
+  .chart-grid{ display:grid; grid-template-columns:repeat(2, 1fr); gap:14px; margin-bottom:14px; }
+  .chart-grid .wide{ grid-column:1 / -1; }
+  @media (max-width:720px){ .chart-grid{ grid-template-columns:1fr; } }
+  .card{
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+    padding:18px 18px 16px; box-shadow:var(--shadow); position:relative;
+  }
+  .card h3{ font-size:14.5px; font-weight:600; margin-bottom:2px; }
+  .card .hint{ font-size:11.5px; color:var(--ink-2); margin-bottom:14px; }
+
+  /* Annotation dots */
+  .note{ display:none; }
+  body.show-notes .note{ display:block; position:absolute; z-index:5; }
+  .note summary{
+    all:unset; cursor:pointer; width:20px; height:20px; border-radius:50%;
+    background:var(--critical); color:#fff; font-family:"IBM Plex Mono"; font-weight:700; font-size:10.5px;
+    display:flex; align-items:center; justify-content:center; box-shadow:0 0 0 3px color-mix(in srgb, var(--critical) 25%, transparent);
+    animation: pulse 2.2s ease-in-out infinite;
+  }
+  @media (prefers-reduced-motion: reduce){ .note summary{ animation:none; } }
+  @keyframes pulse{ 0%,100%{ box-shadow:0 0 0 3px color-mix(in srgb, var(--critical) 25%, transparent);} 50%{ box-shadow:0 0 0 6px color-mix(in srgb, var(--critical) 12%, transparent);} }
+  .note[open] summary{ background:var(--ink); }
+  .note .pop{
+    position:absolute; top:26px; right:0; width:230px; background:var(--ink); color:var(--paper);
+    padding:12px 13px; border-radius:8px; font-size:12px; line-height:1.45; box-shadow:var(--shadow);
+  }
+  .note .pop b{ display:block; font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:var(--accent); margin-bottom:5px; }
+
+  /* Donut */
+  .donut-wrap{ display:flex; align-items:center; gap:22px; flex-wrap:wrap; }
+  .donut{ width:128px; height:128px; border-radius:50%; flex:none; position:relative; }
+  .donut::after{ content:""; position:absolute; inset:20px; border-radius:50%; background:var(--surface); display:flex; }
+  .donut-total{ position:absolute; inset:20px; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .donut-total b{ font-family:"Fraunces"; font-size:19px; }
+  .donut-total span{ font-size:9.5px; color:var(--ink-2); text-transform:uppercase; letter-spacing:.06em; }
+  .legend{ display:flex; flex-direction:column; gap:9px; }
+  .legend .row{ display:flex; align-items:center; gap:8px; font-size:12.5px; }
+  .swatch{ width:10px; height:10px; border-radius:3px; flex:none; }
+  .legend b{ margin-left:auto; font-family:"IBM Plex Mono"; padding-left:14px; }
+
+  /* HTML bar charts */
+  .barlist{ display:flex; flex-direction:column; gap:9px; }
+  .bar-row{ display:grid; grid-template-columns: 108px 1fr 52px; align-items:center; gap:10px; font-size:12px; }
+  .bar-row .name{ color:var(--ink-2); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .bar-track{ background:var(--surface-2); border-radius:99px; height:11px; overflow:hidden; }
+  .bar-fill{ height:100%; border-radius:99px; }
+  .bar-row .val{ font-family:"IBM Plex Mono"; text-align:right; }
+  .show-all-btn{ all:unset; cursor:pointer; margin-top:10px; font-size:11.5px; font-weight:700; color:var(--accent); }
+  .show-all-btn:hover{ text-decoration:underline; }
+  .extra-row{ display:none; }
+  .card.expanded .extra-row{ display:grid; }
+
+  /* SVG charts */
+  .chart-svg-wrap{ position:relative; }
+  svg.chart{ width:100%; height:auto; display:block; overflow:visible; }
+  .gridline{ stroke:var(--line); stroke-width:1; }
+  .axislabel{ fill:var(--ink-2); font-size:9.5px; font-family:"IBM Plex Mono"; }
+  .series-label{ font-size:10.5px; font-family:"IBM Plex Mono"; font-weight:600; }
+  .crosshair{ stroke:var(--ink-2); stroke-width:1; stroke-dasharray:3 3; opacity:0; }
+  .hoverdot{ opacity:0; }
+  .tooltip{
+    position:absolute; pointer-events:none; background:var(--ink); color:var(--paper);
+    padding:7px 10px; border-radius:7px; font-size:11.5px; line-height:1.4; opacity:0; transform:translate(-50%,-115%);
+    white-space:nowrap; box-shadow:var(--shadow); transition:opacity .1s; z-index:4;
+  }
+  .tooltip b{ font-family:"IBM Plex Mono"; }
+  .chart-legend{ display:flex; gap:16px; flex-wrap:wrap; margin-top:12px; font-size:11.5px; }
+  .chart-legend .row{ display:flex; align-items:center; gap:6px; color:var(--ink-2); font-weight:600; }
+  .chart-legend .row b{ color:var(--ink); font-family:"IBM Plex Mono"; margin-left:2px; }
+  .table-toggle{ all:unset; cursor:pointer; font-size:11px; font-weight:700; color:var(--accent); position:absolute; top:18px; right:18px; }
+
+  /* Empty state (fixed widget) */
+  .empty-fixed{ display:flex; flex-direction:column; gap:8px; align-items:flex-start; }
+  .empty-fixed .badge{ font-size:10px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--good); background:color-mix(in srgb, var(--good) 14%, transparent); padding:3px 8px; border-radius:99px; }
+  .retire-row{ display:flex; justify-content:space-between; gap:10px; padding:9px 0; border-top:1px solid var(--line); font-size:12.5px; }
+  .retire-row:first-of-type{ border-top:none; }
+  .retire-row .who{ font-weight:600; }
+  .retire-row .meta{ color:var(--ink-2); }
+  .retire-row .age{ font-family:"IBM Plex Mono"; color:var(--warning); font-weight:600; }
+
+  /* Table */
+  .table-card{ overflow:hidden; }
+  .table-tools{ display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:14px; flex-wrap:wrap; }
+  .search-box{
+    display:flex; align-items:center; gap:7px; border:1px solid var(--line); border-radius:7px;
+    padding:7px 10px; background:var(--surface-2); min-width:220px;
+  }
+  .search-box input{ all:unset; font:inherit; font-size:12.5px; flex:1; color:var(--ink); }
+  .sample-badge{ font-size:10px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--ink-2); background:var(--surface-2); border:1px solid var(--line); padding:4px 9px; border-radius:99px; }
+  .table-scroll{ overflow-x:auto; }
+  table{ width:100%; border-collapse:collapse; font-size:12.5px; min-width:760px; }
+  thead th{
+    text-align:left; font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.05em;
+    color:var(--ink-2); padding:0 10px 9px; border-bottom:1.5px solid var(--ink); cursor:pointer; white-space:nowrap;
+    user-select:none;
+  }
+  thead th .arrow{ opacity:.35; margin-left:3px; font-size:10px; }
+  thead th.sorted .arrow{ opacity:1; color:var(--accent); }
+  tbody td{ padding:10px; border-bottom:1px solid var(--line); vertical-align:middle; white-space:nowrap; }
+  tbody tr:hover{ background:var(--surface-2); }
+  .id-cell{ font-family:"IBM Plex Mono"; font-size:11.5px; color:var(--ink-2); }
+  .pill{ display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:99px; font-size:10.5px; font-weight:700; }
+  .pill.watch{ background:color-mix(in srgb, var(--warning) 16%, transparent); color:var(--warning); }
+  .table-foot{ display:flex; justify-content:space-between; align-items:center; margin-top:12px; font-size:11.5px; color:var(--ink-2); }
+  .pager{ display:flex; gap:6px; }
+  .pager button{ all:unset; cursor:pointer; padding:5px 9px; border:1px solid var(--line); border-radius:6px; font-family:"IBM Plex Mono"; font-size:11px; }
+  .pager button:disabled{ opacity:.4; cursor:default; }
+  .pager button.active{ background:var(--ink); color:var(--paper); border-color:var(--ink); }
+
+  .callout{ margin-top:16px; border:1px dashed var(--line); border-radius:var(--radius); padding:16px 18px; font-size:12.5px; color:var(--ink-2); }
+  .callout b{ color:var(--ink); }
+
+  /* Local (page-scoped) filter row */
+  .local-filters{ display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
+  .local-filters select{ font-size:12px; padding:7px 9px; }
+
+  /* Status pills (recruitment) */
+  .status-pill{ display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:99px; font-size:10.5px; font-weight:700; white-space:nowrap; }
+  .status-pill::before{ content:""; width:6px; height:6px; border-radius:50%; background:currentColor; }
+  .status-pill.good{ background:color-mix(in srgb, var(--good) 15%, transparent); color:var(--good); }
+  .status-pill.critical{ background:color-mix(in srgb, var(--critical) 13%, transparent); color:var(--critical); }
+  .status-pill.warning{ background:color-mix(in srgb, var(--warning) 15%, transparent); color:var(--warning); }
+  .status-pill.serious{ background:color-mix(in srgb, var(--serious) 15%, transparent); color:var(--serious); }
+  .status-pill.neutral{ background:var(--surface-2); color:var(--ink-2); }
+
+  /* Stacked 100% bars (TAT performance, compliance C/NC) */
+  .stack-row{ display:flex; flex-direction:column; gap:6px; margin-bottom:14px; }
+  .stack-row:last-child{ margin-bottom:0; }
+  .stack-row .who{ font-size:12.5px; font-weight:600; display:flex; justify-content:space-between; }
+  .stack-row .who span{ font-weight:400; color:var(--ink-2); font-family:"IBM Plex Mono"; font-size:11px; }
+  .stack{ display:flex; height:22px; border-radius:6px; overflow:hidden; gap:2px; background:var(--surface-2); }
+  .stack .seg{ display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:#fff; white-space:nowrap; }
+  .stack-legend{ display:flex; gap:14px; flex-wrap:wrap; margin-top:12px; font-size:11px; color:var(--ink-2); }
+  .stack-legend .row{ display:flex; align-items:center; gap:5px; }
+  .stack-legend .dot{ width:8px; height:8px; border-radius:2px; }
+
+  .def-card{ display:flex; flex-direction:column; gap:12px; }
+  .def-card .def{ padding-bottom:12px; border-bottom:1px solid var(--line); }
+  .def-card .def:last-child{ border:none; padding:0; }
+  .def-card .def b{ display:block; font-size:12.5px; margin-bottom:3px; }
+  .def-card .def span{ font-size:12px; color:var(--ink-2); }
+
+  /* Masked contact */
+  .masked{ font-family:"IBM Plex Mono"; color:var(--ink-2); display:inline-flex; align-items:center; gap:6px; }
+  .reveal-btn{ all:unset; cursor:pointer; font-size:10px; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:.04em; }
+
+  /* Onboarding progress (new joinees) */
+  .onboard{ display:flex; align-items:center; gap:8px; min-width:120px; }
+  .onboard-track{ flex:1; height:7px; background:var(--surface-2); border-radius:99px; overflow:hidden; }
+  .onboard-fill{ height:100%; border-radius:99px; background:var(--cat-2); }
+  .onboard-frac{ font-family:"IBM Plex Mono"; font-size:11px; color:var(--ink-2); white-space:nowrap; }
+  .week-tag{ font-size:10px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--ink-2); background:var(--surface-2); padding:3px 8px; border-radius:99px; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <aside class="rail">
+    <div class="crest">
+      <svg width="34" height="38" viewBox="0 0 34 38" fill="none">
+        <path d="M17 1 L32 6 V17 C32 27 25.5 33.5 17 37 C8.5 33.5 2 27 2 17 V6 Z" stroke="var(--ink)" stroke-width="1.6" fill="var(--surface-2)"/>
+        <path d="M17 1 L32 6 V17 C32 27 25.5 33.5 17 37 Z" fill="var(--accent)" opacity=".14"/>
+        <text x="17" y="23" text-anchor="middle" font-family="Fraunces" font-weight="600" font-size="13" fill="var(--ink)">FS</text>
+      </svg>
+      <div class="wordmark">Fountainhead Schools<small>HR Analytics</small></div>
+    </div>
+
+    <nav class="tabs" role="tablist">
+      <button class="tab-btn active" data-tab="overview"><span class="n">01</span> Overview</button>
+      <button class="tab-btn" data-tab="attrition"><span class="n">02</span> Attrition &amp; Exits</button>
+      <button class="tab-btn" data-tab="recruitment"><span class="n">03</span> Recruitment</button>
+      <button class="tab-btn" data-tab="newjoinees"><span class="n">04</span> New Joinees</button>
+      <button class="tab-btn" data-tab="tickets"><span class="n">05</span> HR Tickets</button>
+      <button class="tab-btn" data-tab="compliance"><span class="n">06</span> Compliance</button>
+    </nav>
+
+    <div class="rail-block" style="position:relative;">
+      <div class="note" style="position:absolute; top:-6px; right:-6px;">
+        <details><summary>2</summary><div class="pop"><b>Before → after</b>Every widget in the source export repeated its own Group/Department/Team filters. These three live once, here, and apply to the whole page below.</div></details>
+      </div>
+      <div class="rail-label">Filters</div>
+      <div class="filters">
+        <label>Academic Year
+          <select id="f-year">
+            <option>AY 2026–27</option>
+            <option>AY 2025–26</option>
+          </select>
+        </label>
+        <label>Entity
+          <select id="f-entity">
+            <option value="all">All entities</option>
+            <option value="FSK">FSK</option>
+            <option value="FSM">FSM</option>
+            <option value="FPV">FPV</option>
+            <option value="FPA">FPA</option>
+            <option value="FWGS">FWGS</option>
+          </select>
+        </label>
+        <label>Group
+          <select id="f-group">
+            <option value="all">All groups</option>
+            <option value="Administration">Administration</option>
+            <option value="Junior School">Junior School</option>
+            <option value="Senior School">Senior School</option>
+          </select>
+        </label>
+      </div>
+    </div>
+
+    <div class="rail-block" style="position:relative;">
+      <div class="note" style="position:absolute; top:-6px; right:-6px;">
+        <details><summary>5</summary><div class="pop"><b>Before → after</b>Codes like FSK, MYP and DP appeared throughout the source report with no key anywhere. Here they resolve on hover, once, in one place.</div></details>
+      </div>
+      <details class="gloss">
+        <summary><span class="ico">i</span> Entity &amp; programme codes</summary>
+        <div class="gloss-list">
+          <div><b>FSK</b><span>Entity code — full name pending</span></div>
+          <div><b>FSM</b><span>Entity code — full name pending</span></div>
+          <div><b>FPV</b><span>Entity code — full name pending</span></div>
+          <div><b>FPA</b><span>Entity code — full name pending</span></div>
+          <div><b>FWGS</b><span>Entity code — full name pending</span></div>
+          <div><b>PYP</b><span>Primary Years Programme</span></div>
+          <div><b>MYP</b><span>Middle Years Programme</span></div>
+          <div><b>DP</b><span>Diploma Programme</span></div>
+          <div><b>MLC</b><span>My Learning Community</span></div>
+        </div>
+      </details>
+    </div>
+
+    <div class="rail-footer">
+      Sample redesign, built from the Sep 2026 HR export.<br>Not connected to live HR data.
+    </div>
+  </aside>
+
+  <main class="content">
+    <header class="letterhead">
+      <div>
+        <p class="eyebrow">HR Analytics · Academic Year 2026–27</p>
+        <h1>Workforce Register</h1>
+      </div>
+      <label class="notes-switch">
+        Redesign notes
+        <span class="switch">
+          <input type="checkbox" id="notes-toggle">
+          <span class="track"></span>
+          <span class="knob"></span>
+        </span>
+      </label>
+    </header>
+
+    <!-- ============ OVERVIEW ============ -->
+    <section id="tab-overview" class="tab-panel active">
+      <div class="kpi-row">
+        <div class="kpi">
+          <div class="lbl">Total staff</div>
+          <div class="val tnum" data-kpi="total">440</div>
+          <div class="sub">Across 5 entities</div>
+        </div>
+        <div class="kpi">
+          <div class="lbl">Average age</div>
+          <div class="val tnum">35<span style="font-size:15px;">yrs</span></div>
+          <div class="sub">Median tenure 4 yrs 11 mo</div>
+        </div>
+        <div class="kpi">
+          <div class="lbl">Avg. tenure</div>
+          <div class="val tnum">4.99<span style="font-size:15px;">yrs</span></div>
+          <div class="sub">35.7% have stayed 10+ yrs</div>
+        </div>
+        <div class="kpi">
+          <div class="lbl">Gender split</div>
+          <div class="val tnum">66.6<span style="font-size:15px;">% F</span></div>
+          <div class="sub">33.4% male · 440 staff</div>
+        </div>
+        <div class="kpi">
+          <div class="lbl">Retirement watch</div>
+          <div class="val tnum">2</div>
+          <div class="sub warn">Aged 58+, within 2 yrs</div>
+        </div>
+      </div>
+
+      <div class="chart-grid">
+        <div class="card">
+          <h3>Gender-wise distribution</h3>
+          <p class="hint">All staff, AY 2026–27</p>
+          <div class="donut-wrap">
+            <div class="donut" style="background: conic-gradient(var(--accent) 0% 66.6%, var(--cat-2) 66.6% 100%);">
+              <div class="donut-total"><b>440</b><span>Staff</span></div>
+            </div>
+            <div class="legend">
+              <div class="row"><span class="swatch" style="background:var(--accent)"></span>Female<b class="tnum">66.6% · 293</b></div>
+              <div class="row"><span class="swatch" style="background:var(--cat-2)"></span>Male<b class="tnum">33.4% · 147</b></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Workforce by group</h3>
+          <p class="hint">Administration · Junior · Senior School</p>
+          <div class="barlist">
+            <div class="bar-row"><span class="name">Senior School</span><div class="bar-track"><div class="bar-fill tnum" style="width:38.4%; background:var(--accent);"></div></div><span class="val tnum">38.4%</span></div>
+            <div class="bar-row"><span class="name">Junior School</span><div class="bar-track"><div class="bar-fill" style="width:32.5%; background:var(--accent);"></div></div><span class="val tnum">32.5%</span></div>
+            <div class="bar-row"><span class="name">Administration</span><div class="bar-track"><div class="bar-fill" style="width:29.1%; background:var(--accent);"></div></div><span class="val tnum">29.1%</span></div>
+          </div>
+        </div>
+
+        <div class="card wide" id="dept-card">
+          <div class="note">
+            <details><summary>4</summary><div class="pop"><b>Before → after</b>Every bar shared one arbitrary hue per department in the source export. Here, one measure (headcount) takes one hue — color no longer stands in for nothing.</div></details>
+          </div>
+          <h3>Department-level staff distribution</h3>
+          <p class="hint">Top departments by headcount, AY 2026–27</p>
+          <div class="barlist" id="dept-list"></div>
+          <button class="show-all-btn" id="dept-toggle">Show all 11 departments</button>
+        </div>
+
+        <div class="card">
+          <h3>Tenure snapshot</h3>
+          <p class="hint">Years of service, all staff</p>
+          <div class="barlist">
+            <div class="bar-row"><span class="name">&lt; 1 year</span><div class="bar-track"><div class="bar-fill" style="width:22.7%; background:var(--seq-1);"></div></div><span class="val tnum">22.7%</span></div>
+            <div class="bar-row"><span class="name">1–3 years</span><div class="bar-track"><div class="bar-fill" style="width:15.5%; background:var(--seq-2);"></div></div><span class="val tnum">15.5%</span></div>
+            <div class="bar-row"><span class="name">5–10 years</span><div class="bar-track"><div class="bar-fill" style="width:26.1%; background:var(--seq-3);"></div></div><span class="val tnum">26.1%</span></div>
+            <div class="bar-row"><span class="name">&gt; 10 years</span><div class="bar-track"><div class="bar-fill" style="width:35.7%; background:var(--seq-4);"></div></div><span class="val tnum">35.7%</span></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="note">
+            <details><summary>1</summary><div class="pop"><b>Before → after</b>This widget showed a bare "Data Studio cannot connect to your data set" error with no fallback. A broken connection now renders as a clear, styled empty/status state instead.</div></details>
+          </div>
+          <h3>Staff nearing retirement (58+)</h3>
+          <p class="hint">Within next 24 months</p>
+          <div class="empty-fixed">
+            <span class="badge">Data connected</span>
+            <div style="width:100%;">
+              <div class="retire-row"><span class="who">R. Menon</span><span class="meta">Librarian Teacher · MYP</span><span class="age tnum">59y 5m</span></div>
+              <div class="retire-row"><span class="who">S. Iyer</span><span class="meta">EY Teacher · EY</span><span class="age tnum">58y 6m</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card table-card">
+        <div class="note">
+          <details><summary>3</summary><div class="pop"><b>Before → after</b>The source table paginated 440 rows, 10 at a time, with no search or sort. This one filters live, sorts by any column, and pages in chunks of 5 for the demo.</div></details>
+        </div>
+        <div class="table-tools">
+          <h3 style="margin-bottom:0;">Staff register</h3>
+          <div style="display:flex; gap:10px; align-items:center;">
+            <span class="sample-badge">Sample records</span>
+            <div class="search-box">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+              <input id="staff-search" placeholder="Search name, dept, designation…">
+            </div>
+          </div>
+        </div>
+        <div class="table-scroll">
+          <table id="staff-table">
+            <thead><tr>
+              <th data-key="id">Emp ID</th>
+              <th data-key="name">Name</th>
+              <th data-key="group">Group</th>
+              <th data-key="designation">Designation</th>
+              <th data-key="dept">Dept</th>
+              <th data-key="doj">DOJ</th>
+              <th data-key="age">Age</th>
+              <th data-key="tenure">Tenure</th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="table-foot">
+          <span id="staff-count"></span>
+          <div class="pager" id="staff-pager"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ ATTRITION ============ -->
+    <section id="tab-attrition" class="tab-panel">
+      <div class="kpi-row">
+        <div class="kpi">
+          <div class="lbl">Attrition · AY 26–27</div>
+          <div class="val tnum">7.87<span style="font-size:15px;">%</span></div>
+          <div class="sub good">↓ from 16.77% last year</div>
+        </div>
+        <div class="kpi">
+          <div class="lbl">Resigned this period</div>
+          <div class="val tnum">5</div>
+          <div class="sub">Sep 2026 window</div>
+        </div>
+        <div class="kpi">
+          <div class="lbl">Top exit reason</div>
+          <div class="val" style="font-size:19px;">Controllable</div>
+          <div class="sub">3 of 5 resignations</div>
+        </div>
+      </div>
+
+      <div class="chart-grid">
+        <div class="card wide">
+          <button class="table-toggle" id="attr-table-toggle">View as table</button>
+          <h3>Year-on-year attrition rate</h3>
+          <p class="hint">Churn ratio, AY 2015–16 to 2026–27</p>
+          <div class="chart-svg-wrap" id="attr-chart-wrap">
+            <svg class="chart" id="attr-svg" viewBox="0 0 640 210"></svg>
+            <div class="tooltip" id="attr-tooltip"></div>
+          </div>
+          <div class="table-scroll" id="attr-table-view" style="display:none; margin-top:10px;">
+            <table><thead><tr><th>Year</th><th>Churn rate</th></tr></thead><tbody id="attr-table-body"></tbody></table>
+          </div>
+        </div>
+
+        <div class="card wide">
+          <h3>Employee strength vs. resignations</h3>
+          <p class="hint">Beginning / end of year headcount</p>
+          <div class="chart-svg-wrap" id="strength-chart-wrap">
+            <svg class="chart" id="strength-svg" viewBox="0 0 640 220"></svg>
+            <div class="tooltip" id="strength-tooltip"></div>
+          </div>
+          <div class="chart-legend">
+            <span class="row"><span class="swatch" style="background:var(--accent)"></span>Start of year<b>433</b></span>
+            <span class="row"><span class="swatch" style="background:var(--cat-2)"></span>End of year<b>431</b></span>
+            <span class="row"><span class="swatch" style="background:var(--cat-4)"></span>Resigned<b>34</b></span>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Primary exit reason</h3>
+          <p class="hint">Current period, n = 5</p>
+          <div class="barlist">
+            <div class="bar-row"><span class="name">Controllable</span><div class="bar-track"><div class="bar-fill" style="width:100%; background:var(--critical);"></div></div><span class="val tnum">3</span></div>
+            <div class="bar-row"><span class="name">Not specified</span><div class="bar-track"><div class="bar-fill" style="width:66.6%; background:var(--ink-2);"></div></div><span class="val tnum">2</span></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Secondary exit reason</h3>
+          <p class="hint">Current period, n = 5</p>
+          <div class="barlist">
+            <div class="bar-row"><span class="name">Growth ceiling</span><div class="bar-track"><div class="bar-fill" style="width:100%; background:var(--warning);"></div></div><span class="val tnum">3</span></div>
+            <div class="bar-row"><span class="name">Better offer</span><div class="bar-track"><div class="bar-fill" style="width:33.3%; background:var(--ink-2);"></div></div><span class="val tnum">1</span></div>
+            <div class="bar-row"><span class="name">Not specified</span><div class="bar-track"><div class="bar-fill" style="width:33.3%; background:var(--ink-2);"></div></div><span class="val tnum">1</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card table-card">
+        <div class="table-tools">
+          <h3 style="margin-bottom:0;">Resigned staff — current period</h3>
+          <span class="sample-badge">Sample records</span>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>Name</th><th>Group</th><th>Designation</th><th>DOJ</th><th>Last working day</th><th>Primary reason</th></tr></thead>
+            <tbody>
+              <tr><td>N. Contractor</td><td>Administration</td><td>Ops. Exec. — Career Counsellor</td><td class="mono">Sep 1, 2025</td><td class="mono">Sep 30, 2026</td><td>Better opportunity</td></tr>
+              <tr><td>P. Jain</td><td>Senior School</td><td>DP Mathematics Teacher</td><td class="mono">Jun 4, 2026</td><td class="mono">Sep 17, 2026</td><td>Not specified</td></tr>
+              <tr><td>R. Kapadia</td><td>Administration</td><td>Career Counsellor</td><td class="mono">Jan 2, 2026</td><td class="mono">Sep 15, 2026</td><td>Not specified</td></tr>
+              <tr><td>V. Khurana</td><td>Junior School</td><td>PYP Teacher</td><td class="mono">Jul 19, 2024</td><td class="mono">Sep 3, 2026</td><td>Growth ceiling</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="callout">
+        <b>Reading this page:</b> the churn ratio in the source report calls itself both "Attrition Rate" and "churn ratio" across two adjacent labels — here it's one term throughout. The Sep 2026 exit list above previously included full names, phone-adjacent identifiers and per-person exit reasons in one flat, unrestricted export; a live version of this page belongs behind HR/Admin-only access, filtered by manager scope.
+      </div>
+    </section>
+
+    <!-- ============ RECRUITMENT ============ -->
+    <section id="tab-recruitment" class="tab-panel">
+      <div class="local-filters">
+        <select><option>Year of application: 2026</option><option>2025</option><option>2024</option></select>
+        <select><option>Position: All positions</option><option>Administration</option><option>Junior School</option><option>Senior School</option></select>
+        <select><option>Recruitment status: All</option><option>Joined</option><option>Rejected</option><option>Under review</option></select>
+      </div>
+
+      <div class="kpi-row">
+        <div class="kpi">
+          <div class="lbl">Total applications</div>
+          <div class="val tnum">6,066</div>
+          <div class="sub">All-time, this pipeline</div>
+        </div>
+        <div class="kpi">
+          <div class="lbl">Joined</div>
+          <div class="val tnum">397</div>
+          <div class="sub good">6.5% conversion</div>
+        </div>
+        <div class="kpi">
+          <div class="lbl">Rejected</div>
+          <div class="val tnum">2,310</div>
+          <div class="sub">38.1% of applicants</div>
+        </div>
+        <div class="kpi">
+          <div class="lbl">In process</div>
+          <div class="val tnum">785</div>
+          <div class="sub warn">Under review or on hold</div>
+        </div>
+      </div>
+
+      <div class="chart-grid">
+        <div class="card wide">
+          <h3>Applications by recruitment status</h3>
+          <p class="hint">All-time totals, grand total 6,066</p>
+          <div class="barlist" id="recruit-status-list"></div>
+        </div>
+
+        <div class="card">
+          <h3>Applications by group</h3>
+          <p class="hint">Where the role sits</p>
+          <div class="barlist">
+            <div class="bar-row"><span class="name">Senior School</span><div class="bar-track"><div class="bar-fill" style="width:100%; background:var(--accent);"></div></div><span class="val tnum">2,836</span></div>
+            <div class="bar-row"><span class="name">Junior School</span><div class="bar-track"><div class="bar-fill" style="width:73.5%; background:var(--accent);"></div></div><span class="val tnum">2,085</span></div>
+            <div class="bar-row"><span class="name">Administration</span><div class="bar-track"><div class="bar-fill" style="width:39.8%; background:var(--accent);"></div></div><span class="val tnum">1,129</span></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Top areas of interest</h3>
+          <p class="hint">Named subject/role interests</p>
+          <div class="barlist" id="interest-list"></div>
+        </div>
+      </div>
+
+      <div class="card table-card">
+        <div class="note">
+          <details><summary>6</summary><div class="pop"><b>Before → after</b>The source export listed every candidate's raw mobile number in plain text. Contact numbers are masked by default here — a recruiter clicks to reveal one, not scroll past 6,000 of them.</div></details>
+        </div>
+        <div class="table-tools">
+          <h3 style="margin-bottom:0;">Candidate pipeline</h3>
+          <div style="display:flex; gap:10px; align-items:center;">
+            <span class="sample-badge">Sample records</span>
+            <div class="search-box">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+              <input id="candidate-search" placeholder="Search name, position, area…">
+            </div>
+          </div>
+        </div>
+        <div class="table-scroll">
+          <table id="candidate-table">
+            <thead><tr>
+              <th data-key="name">Name</th>
+              <th data-key="position">Position applied for</th>
+              <th data-key="interest">Area of interest</th>
+              <th data-key="applied">Applied</th>
+              <th data-key="status">Status</th>
+              <th>Contact</th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="table-foot">
+          <span id="candidate-count"></span>
+          <div class="pager" id="candidate-pager"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ NEW JOINEES ============ -->
+    <section id="tab-newjoinees" class="tab-panel">
+      <div class="local-filters">
+        <select><option>Sep 1 – Sep 30, 2026</option><option>Aug 1 – Aug 31, 2026</option><option>Jul 1 – Jul 31, 2026</option></select>
+      </div>
+
+      <div class="kpi-row">
+        <div class="kpi">
+          <div class="lbl">New joinees</div>
+          <div class="val tnum">7</div>
+          <div class="sub">Sep 1 – Sep 30, 2026</div>
+        </div>
+        <div class="kpi">
+          <div class="lbl">Largest group</div>
+          <div class="val" style="font-size:19px;">Sr. &amp; Jr. School</div>
+          <div class="sub">3 each · Admin 1</div>
+        </div>
+        <div class="kpi">
+          <div class="lbl">Onboarding complete</div>
+          <div class="val tnum">2<span style="font-size:15px;">/7</span></div>
+          <div class="sub warn">5 checklists in progress</div>
+        </div>
+      </div>
+
+      <div class="chart-grid">
+        <div class="card">
+          <h3>New joins by group</h3>
+          <p class="hint">Sep 2026 window</p>
+          <div class="barlist">
+            <div class="bar-row"><span class="name">Senior School</span><div class="bar-track"><div class="bar-fill" style="width:100%; background:var(--accent);"></div></div><span class="val tnum">3</span></div>
+            <div class="bar-row"><span class="name">Junior School</span><div class="bar-track"><div class="bar-fill" style="width:100%; background:var(--accent);"></div></div><span class="val tnum">3</span></div>
+            <div class="bar-row"><span class="name">Administration</span><div class="bar-track"><div class="bar-fill" style="width:33.3%; background:var(--accent);"></div></div><span class="val tnum">1</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>New joins by department</h3>
+          <p class="hint">Sep 2026 window</p>
+          <div class="barlist">
+            <div class="bar-row"><span class="name">PYP</span><div class="bar-track"><div class="bar-fill" style="width:100%; background:var(--accent);"></div></div><span class="val tnum">3</span></div>
+            <div class="bar-row"><span class="name">MYP</span><div class="bar-track"><div class="bar-fill" style="width:100%; background:var(--accent);"></div></div><span class="val tnum">3</span></div>
+            <div class="bar-row"><span class="name">Founders Team</span><div class="bar-track"><div class="bar-fill" style="width:33.3%; background:var(--accent);"></div></div><span class="val tnum">1</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card table-card">
+        <div class="note">
+          <details><summary>7</summary><div class="pop"><b>Before → after</b>The source ticket log (page 7) tracked onboarding as free-text tickets per joinee, with no shared view of what's done. Here the same checklist — leaves, parking, bank account, credentials — is one progress bar per row.</div></details>
+        </div>
+        <div class="table-tools">
+          <h3 style="margin-bottom:0;">New joinee roster</h3>
+          <span class="sample-badge">Sample records</span>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>Emp ID</th><th>Name</th><th>DOJ</th><th>Group</th><th>Department</th><th>Designation</th><th>Onboarding</th></tr></thead>
+            <tbody id="joinee-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ HR TICKETS ============ -->
+    <section id="tab-tickets" class="tab-panel">
+      <div class="local-filters">
+        <select><option>Sep 7 – Sep 13, 2026</option><option>Aug 31 – Sep 6, 2026</option><option>Sep 14 – Sep 20, 2026</option></select>
+      </div>
+
+      <div class="kpi-row">
+        <div class="kpi">
+          <div class="lbl">Open tickets</div>
+          <div class="val tnum">11</div>
+          <div class="sub">Sep 7–13, 2026 window</div>
+        </div>
+        <div class="kpi">
+          <div class="lbl">Not yet resolved</div>
+          <div class="val tnum">100<span style="font-size:15px;">%</span></div>
+          <div class="sub warn">All 11 still open</div>
+        </div>
+        <div class="kpi">
+          <div class="lbl">By group</div>
+          <div class="val" style="font-size:19px;">Admin · JS tied</div>
+          <div class="sub">5 Admin · 5 Junior · 1 Senior</div>
+        </div>
+        <div class="kpi">
+          <div class="lbl">Top issue, all-time</div>
+          <div class="val" style="font-size:19px;">Salary error</div>
+          <div class="sub">14 tickets logged</div>
+        </div>
+      </div>
+
+      <div class="chart-grid">
+        <div class="card">
+          <h3>Issue types</h3>
+          <p class="hint">All-time ticket volume by category</p>
+          <div class="barlist">
+            <div class="bar-row"><span class="name">Salary — Incorrect</span><div class="bar-track"><div class="bar-fill" style="width:100%; background:var(--accent);"></div></div><span class="val tnum">14</span></div>
+            <div class="bar-row"><span class="name">Leaves &amp; credits</span><div class="bar-track"><div class="bar-fill" style="width:50%; background:var(--accent);"></div></div><span class="val tnum">7</span></div>
+            <div class="bar-row"><span class="name">New joinee process</span><div class="bar-track"><div class="bar-fill" style="width:50%; background:var(--accent);"></div></div><span class="val tnum">7</span></div>
+            <div class="bar-row"><span class="name">Credit deduction error</span><div class="bar-track"><div class="bar-fill" style="width:28.6%; background:var(--accent);"></div></div><span class="val tnum">4</span></div>
+            <div class="bar-row"><span class="name">Full &amp; final settlement</span><div class="bar-track"><div class="bar-fill" style="width:7.1%; background:var(--accent);"></div></div><span class="val tnum">1</span></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Turnaround-time performance</h3>
+          <p class="hint">Current quarter, by assignee</p>
+          <div class="stack-row">
+            <div class="who">Twisha Joshi</div>
+            <div class="stack">
+              <div class="seg" style="width:60%; background:var(--good);">60%</div>
+              <div class="seg" style="width:30%; background:var(--warning);">30%</div>
+              <div class="seg" style="width:10%; background:var(--serious);">10%</div>
+            </div>
+          </div>
+          <div class="stack-row">
+            <div class="who">Vidhi Shah</div>
+            <div class="stack">
+              <div class="seg" style="width:40%; background:var(--good);">40%</div>
+              <div class="seg" style="width:35%; background:var(--warning);">35%</div>
+              <div class="seg" style="width:20%; background:var(--serious);">20%</div>
+              <div class="seg" style="width:5%; background:var(--critical);"></div>
+            </div>
+          </div>
+          <div class="stack-row">
+            <div class="who">Sonali Sarang</div>
+            <div class="stack">
+              <div class="seg" style="width:25%; background:var(--good);">25%</div>
+              <div class="seg" style="width:50%; background:var(--warning);">50%</div>
+              <div class="seg" style="width:20%; background:var(--serious);">20%</div>
+              <div class="seg" style="width:5%; background:var(--critical);"></div>
+            </div>
+          </div>
+          <div class="stack-legend">
+            <span class="row"><span class="dot" style="background:var(--good)"></span>On time (1–5d)</span>
+            <span class="row"><span class="dot" style="background:var(--warning)"></span>Minor delay (6–10d)</span>
+            <span class="row"><span class="dot" style="background:var(--serious)"></span>Major delay (11–15d)</span>
+            <span class="row"><span class="dot" style="background:var(--critical)"></span>Critical (&gt;16d)</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card table-card">
+        <div class="note">
+          <details><summary>8</summary><div class="pop"><b>Before → after</b>Every open ticket in the source list showed the same flat "Not Complete" pill regardless of age or severity. A live version needs a due-date countdown and severity — not one flat state for 11 very different requests.</div></details>
+        </div>
+        <div class="table-tools">
+          <h3 style="margin-bottom:0;">Open tickets</h3>
+          <span class="sample-badge">Sample records</span>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>Ticket</th><th>Raised by</th><th>Assigned to</th><th>Issue</th><th>Group</th><th>Due</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td class="id-cell">TKT146550</td><td>A. Rathi</td><td>T. Joshi</td><td>Staff — new joinee process</td><td>Administration</td><td class="mono">Sep 15</td><td><span class="status-pill warning">Not complete</span></td></tr>
+              <tr><td class="id-cell">TKT146471</td><td>K. Verma</td><td>S. Sarang</td><td>Credit deduction — incorrect</td><td>Junior School</td><td class="mono">Sep 14</td><td><span class="status-pill warning">Not complete</span></td></tr>
+              <tr><td class="id-cell">TKT146437</td><td>R. Dutta</td><td>V. Shah</td><td>Compensation claim not received</td><td>Administration</td><td class="mono">Sep 14</td><td><span class="status-pill critical">Not complete</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="callout">
+        <b>Reading this page:</b> the source report's "11 tickets" total (this week) and its issue-type breakdown (14+7+7+4+1 = 33, all-time) are two different date ranges sharing one page with no scope label on either — easy to misread as the same number. Here each chart states its own window explicitly.
+      </div>
+    </section>
+
+    <!-- ============ COMPLIANCE ============ -->
+    <section id="tab-compliance" class="tab-panel">
+      <div class="local-filters">
+        <select><option>Reporting month: October 2025</option><option>September 2025</option></select>
+      </div>
+
+      <div class="kpi-row">
+        <div class="kpi">
+          <div class="lbl">FS / Protego compliance</div>
+          <div class="val tnum">66.7<span style="font-size:15px;">%</span></div>
+          <div class="sub warn">4 of 6 checklist items met</div>
+        </div>
+        <div class="kpi">
+          <div class="lbl">FSM compliance</div>
+          <div class="val tnum">75<span style="font-size:15px;">%</span></div>
+          <div class="sub good">3 of 4 checklist items met</div>
+        </div>
+        <div class="kpi">
+          <div class="lbl">Open non-compliance</div>
+          <div class="val tnum">3</div>
+          <div class="sub warn">All in Payroll / Legal</div>
+        </div>
+        <div class="kpi">
+          <div class="lbl">Reporting month</div>
+          <div class="val" style="font-size:19px;">Oct 2025</div>
+          <div class="sub">Next review Nov 2025</div>
+        </div>
+      </div>
+
+      <div class="chart-grid">
+        <div class="card">
+          <h3>FS / Protego — core areas</h3>
+          <p class="hint">Compliant vs. non-compliant, by area</p>
+          <div class="stack-row">
+            <div class="who">Hiring &amp; Onboarding</div>
+            <div class="stack"><div class="seg" style="width:100%; background:var(--good);">100% C</div></div>
+          </div>
+          <div class="stack-row">
+            <div class="who">Legal &amp; Compliance</div>
+            <div class="stack">
+              <div class="seg" style="width:66.67%; background:var(--good);">66.7%</div>
+              <div class="seg" style="width:33.33%; background:var(--critical);">33.3%</div>
+            </div>
+          </div>
+          <div class="stack-row">
+            <div class="who">Payroll</div>
+            <div class="stack">
+              <div class="seg" style="width:50%; background:var(--good);">50%</div>
+              <div class="seg" style="width:50%; background:var(--critical);">50%</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>FSM — core areas</h3>
+          <p class="hint">Compliant vs. non-compliant, by area</p>
+          <div class="stack-row">
+            <div class="who">Hiring &amp; Onboarding</div>
+            <div class="stack"><div class="seg" style="width:100%; background:var(--good);">100% C</div></div>
+          </div>
+          <div class="stack-row">
+            <div class="who">Legal &amp; Compliance</div>
+            <div class="stack"><div class="seg" style="width:100%; background:var(--good);">100% C</div></div>
+          </div>
+          <div class="stack-row">
+            <div class="who">Payroll</div>
+            <div class="stack">
+              <div class="seg" style="width:50%; background:var(--good);">50%</div>
+              <div class="seg" style="width:50%; background:var(--critical);">50%</div>
+            </div>
+          </div>
+          <div class="stack-legend">
+            <span class="row"><span class="dot" style="background:var(--good)"></span>Compliant</span>
+            <span class="row"><span class="dot" style="background:var(--critical)"></span>Non-compliant</span>
+          </div>
+        </div>
+
+        <div class="card wide">
+          <div class="note">
+            <details><summary>9</summary><div class="pop"><b>Before → after</b>Each checklist pointer was one unreadable run-on sentence packed into a table cell. Here the same policy text lives in a reference card, once — the table just needs to show status.</div></details>
+          </div>
+          <h3>Core area definitions</h3>
+          <p class="hint">What each compliance area checks for</p>
+          <div class="def-card">
+            <div class="def"><b>Hiring &amp; Onboarding</b><span>Ensure 100% completion of joining documentation as per the defined checklist.</span></div>
+            <div class="def"><b>Payroll</b><span>(a) Process 100% of payroll by the 28th of each month (FS: 1st · FSM: 5th). (b) Resolve 100% of payroll queries within 5 working days of receipt.</span></div>
+            <div class="def"><b>Legal &amp; Compliance</b><span>(a) 100% on-time filing and payment of statutory obligations (PF, ESI, PT, TDS, etc.). (b) Complete exit formalities within 7 working days of resignation/last working day. (c) Process accurate Full &amp; Final settlements within 30 days of exit, with zero compliance lapses.</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card table-card">
+        <div class="table-tools">
+          <h3 style="margin-bottom:0;">Checklist detail</h3>
+          <span class="sample-badge">Oct 2025</span>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>Entity</th><th>Core area</th><th>Checklist pointer</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td>FS/Protego</td><td>Hiring &amp; Onboarding</td><td>100% joining documents per checklist</td><td><span class="status-pill good">Compliant</span></td></tr>
+              <tr><td>FS/Protego</td><td>Payroll</td><td>Payroll processed by the 28th, per cycle</td><td><span class="status-pill good">Compliant</span></td></tr>
+              <tr><td>FS/Protego</td><td>Legal &amp; Compliance</td><td>On-time statutory filing &amp; payment (PF, ESI, PT, TDS)</td><td><span class="status-pill good">Compliant</span></td></tr>
+              <tr><td>FS/Protego</td><td>Legal &amp; Compliance</td><td>Full &amp; Final settlement within 30 days of exit</td><td><span class="status-pill good">Compliant</span></td></tr>
+              <tr><td>FSM</td><td>Hiring &amp; Onboarding</td><td>100% joining documents per checklist</td><td><span class="status-pill good">Compliant</span></td></tr>
+              <tr><td>FSM</td><td>Payroll</td><td>Payroll processed by the 5th, per cycle</td><td><span class="status-pill good">Compliant</span></td></tr>
+              <tr><td>FSM</td><td>Legal &amp; Compliance</td><td>On-time statutory filing &amp; payment (PF, ESI, PT, TDS)</td><td><span class="status-pill good">Compliant</span></td></tr>
+              <tr><td>FS/Protego</td><td>Payroll</td><td>Payroll queries resolved within 5 working days</td><td><span class="status-pill critical">Non-compliant</span></td></tr>
+              <tr><td>FS/Protego</td><td>Legal &amp; Compliance</td><td>Exit formalities completed within 7 working days</td><td><span class="status-pill critical">Non-compliant</span></td></tr>
+              <tr><td>FSM</td><td>Payroll</td><td>Payroll queries resolved within 5 working days</td><td><span class="status-pill critical">Non-compliant</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+(function(){
+  // ---------- Tabs ----------
+  var tabBtns = document.querySelectorAll('.tab-btn');
+  tabBtns.forEach(function(btn){
+    btn.addEventListener('click', function(){
+      tabBtns.forEach(function(b){ b.classList.remove('active'); });
+      btn.classList.add('active');
+      document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
+      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    });
+  });
+
+  // ---------- Redesign notes toggle ----------
+  document.getElementById('notes-toggle').addEventListener('change', function(e){
+    document.body.classList.toggle('show-notes', e.target.checked);
+  });
+  document.querySelectorAll('.note details').forEach(function(d){
+    d.addEventListener('toggle', function(){
+      if(d.open){
+        document.querySelectorAll('.note details').forEach(function(o){ if(o !== d) o.open = false; });
+      }
+    });
+  });
+
+  // ---------- Department chart ----------
+  var deptData = [
+    {name:'PYP', value:125},
+    {name:'MYP', value:84},
+    {name:'Operations', value:48},
+    {name:'DP', value:45},
+    {name:'EY', value:43},
+    {name:'Services', value:16},
+    {name:'MLC', value:12},
+    {name:'HR', value:8},
+    {name:'Accounts', value:8},
+    {name:'USET', value:5},
+    {name:'Other departments', value:47}
+  ];
+  var deptMax = Math.max.apply(null, deptData.map(function(d){ return d.value; }));
+  var deptList = document.getElementById('dept-list');
+  deptData.forEach(function(d, i){
+    var row = document.createElement('div');
+    row.className = 'bar-row' + (i >= 6 ? ' extra-row' : '');
+    row.innerHTML = '<span class="name">' + d.name + '</span>' +
+      '<div class="bar-track"><div class="bar-fill" style="width:' + (d.value/deptMax*100) + '%; background:var(--accent);"></div></div>' +
+      '<span class="val tnum">' + d.value + '</span>';
+    deptList.appendChild(row);
+  });
+  document.getElementById('dept-toggle').addEventListener('click', function(){
+    var card = document.getElementById('dept-card');
+    card.classList.toggle('expanded');
+    this.textContent = card.classList.contains('expanded') ? 'Show fewer departments' : 'Show all 11 departments';
+  });
+
+  // ---------- Line chart helper ----------
+  function buildAxis(svg, w, h, padL, padT, padB, maxY, ticks){
+    var plotH = h - padT - padB;
+    ticks.forEach(function(t){
+      var y = padT + plotH - (t/maxY)*plotH;
+      var line = document.createElementNS('http://www.w3.org/2000/svg','line');
+      line.setAttribute('x1', padL); line.setAttribute('x2', w-10);
+      line.setAttribute('y1', y); line.setAttribute('y2', y);
+      line.setAttribute('class','gridline');
+      svg.appendChild(line);
+      var lbl = document.createElementNS('http://www.w3.org/2000/svg','text');
+      lbl.setAttribute('x', padL-8); lbl.setAttribute('y', y+3); lbl.setAttribute('text-anchor','end');
+      lbl.setAttribute('class','axislabel'); lbl.textContent = t + (t>=1 ? (maxY<=100?'%':'') : '');
+      svg.appendChild(lbl);
+    });
+  }
+
+  // ---------- Attrition trend chart ----------
+  var years = ['15–16','16–17','17–18','18–19','19–20','20–21','21–22','22–23','23–24','24–25','25–26','26–27'];
+  var churn = [7.95,16.27,9.41,13.50,8.10,16.94,24.13,27.48,20.84,23.88,16.77,7.87];
+  (function(){
+    var svg = document.getElementById('attr-svg');
+    var w=640,h=210,padL=34,padT=10,padB=26,maxY=30;
+    var plotW = w - padL - 20, plotH = h - padT - padB;
+    buildAxis(svg,w,h,padL,padT,padB,maxY,[0,10,20,30]);
+
+    var pts = churn.map(function(v,i){
+      var x = padL + (i/(churn.length-1))*plotW;
+      var y = padT + plotH - (v/maxY)*plotH;
+      return [x,y];
+    });
+    var pathD = 'M' + pts.map(function(p){ return p[0]+','+p[1]; }).join(' L');
+    var areaD = pathD + ' L' + pts[pts.length-1][0] + ',' + (padT+plotH) + ' L' + pts[0][0] + ',' + (padT+plotH) + 'Z';
+
+    var area = document.createElementNS('http://www.w3.org/2000/svg','path');
+    area.setAttribute('d', areaD); area.setAttribute('fill','var(--accent)'); area.setAttribute('opacity','0.10');
+    svg.appendChild(area);
+
+    var path = document.createElementNS('http://www.w3.org/2000/svg','path');
+    path.setAttribute('d', pathD); path.setAttribute('fill','none'); path.setAttribute('stroke','var(--accent)'); path.setAttribute('stroke-width','2.4');
+    svg.appendChild(path);
+
+    // x labels (every other)
+    years.forEach(function(yr,i){
+      if(i % 2 !== 0 && i !== years.length-1) return;
+      var t = document.createElementNS('http://www.w3.org/2000/svg','text');
+      t.setAttribute('x', pts[i][0]); t.setAttribute('y', h-6); t.setAttribute('text-anchor','middle');
+      t.setAttribute('class','axislabel'); t.textContent = "'" + yr;
+      svg.appendChild(t);
+    });
+
+    // end label
+    var endLbl = document.createElementNS('http://www.w3.org/2000/svg','text');
+    endLbl.setAttribute('x', pts[pts.length-1][0]); endLbl.setAttribute('y', pts[pts.length-1][1]-10);
+    endLbl.setAttribute('text-anchor','end'); endLbl.setAttribute('class','series-label'); endLbl.setAttribute('fill','var(--accent)');
+    endLbl.textContent = '7.87%';
+    svg.appendChild(endLbl);
+
+    var crosshair = document.createElementNS('http://www.w3.org/2000/svg','line');
+    crosshair.setAttribute('y1', padT); crosshair.setAttribute('y2', padT+plotH); crosshair.setAttribute('class','crosshair');
+    svg.appendChild(crosshair);
+    var dot = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    dot.setAttribute('r','4'); dot.setAttribute('fill','var(--accent)'); dot.setAttribute('class','hoverdot');
+    svg.appendChild(dot);
+
+    var wrap = document.getElementById('attr-chart-wrap');
+    var tooltip = document.getElementById('attr-tooltip');
+    var overlay = document.createElementNS('http://www.w3.org/2000/svg','rect');
+    overlay.setAttribute('x', padL); overlay.setAttribute('y', 0); overlay.setAttribute('width', plotW); overlay.setAttribute('height', h);
+    overlay.setAttribute('fill','transparent');
+    svg.appendChild(overlay);
+
+    overlay.addEventListener('mousemove', function(e){
+      var rect = svg.getBoundingClientRect();
+      var scaleX = w / rect.width;
+      var mx = (e.clientX - rect.left) * scaleX;
+      var i = Math.round((mx - padL) / plotW * (churn.length-1));
+      i = Math.max(0, Math.min(churn.length-1, i));
+      var p = pts[i];
+      crosshair.setAttribute('x1', p[0]); crosshair.setAttribute('x2', p[0]); crosshair.style.opacity = 1;
+      dot.setAttribute('cx', p[0]); dot.setAttribute('cy', p[1]); dot.style.opacity = 1;
+      var wrapRect = wrap.getBoundingClientRect();
+      var scaleDisp = rect.width / w;
+      tooltip.style.left = (p[0]*scaleDisp) + 'px';
+      tooltip.style.top = (p[1]*scaleDisp) + 'px';
+      tooltip.innerHTML = 'AY ' + years[i] + '<br><b>' + churn[i].toFixed(2) + '%</b> churn';
+      tooltip.style.opacity = 1;
+    });
+    overlay.addEventListener('mouseleave', function(){
+      crosshair.style.opacity = 0; dot.style.opacity = 0; tooltip.style.opacity = 0;
+    });
+
+    // table view toggle
+    var tbody = document.getElementById('attr-table-body');
+    years.forEach(function(yr,i){
+      var tr = document.createElement('tr');
+      tr.innerHTML = '<td>AY ' + yr + '</td><td class="mono tnum">' + churn[i].toFixed(2) + '%</td>';
+      tbody.appendChild(tr);
+    });
+    document.getElementById('attr-table-toggle').addEventListener('click', function(){
+      var tv = document.getElementById('attr-table-view');
+      var showing = tv.style.display !== 'none';
+      tv.style.display = showing ? 'none' : 'block';
+      wrap.style.display = showing ? 'block' : 'none';
+      this.textContent = showing ? 'View as table' : 'View as chart';
+    });
+  })();
+
+  // ---------- Employee strength chart ----------
+  var boy = [159,194,224,267,299,367,366,357,379,360,381,433];
+  var eoy = [193,224,265,296,368,365,355,378,360,377,418,431];
+  var res = [14,34,23,38,27,62,87,101,77,88,67,34];
+  (function(){
+    var svg = document.getElementById('strength-svg');
+    var w=640,h=220,padL=34,padT=10,padB=26,maxY=450;
+    var plotW = w - padL - 20, plotH = h - padT - padB;
+    buildAxis(svg,w,h,padL,padT,padB,maxY,[0,150,300,450]);
+
+    function toPts(series){
+      return series.map(function(v,i){
+        var x = padL + (i/(series.length-1))*plotW;
+        var y = padT + plotH - (v/maxY)*plotH;
+        return [x,y];
+      });
+    }
+    var series = [
+      {data:boy, color:'var(--accent)', label:'Start of year'},
+      {data:eoy, color:'var(--cat-2)', label:'End of year'},
+      {data:res, color:'var(--cat-4)', label:'Resigned'}
+    ];
+    var allPts = series.map(function(s){ return toPts(s.data); });
+    series.forEach(function(s, si){
+      var pts = allPts[si];
+      var d = 'M' + pts.map(function(p){ return p[0]+','+p[1]; }).join(' L');
+      var path = document.createElementNS('http://www.w3.org/2000/svg','path');
+      path.setAttribute('d', d); path.setAttribute('fill','none'); path.setAttribute('stroke', s.color); path.setAttribute('stroke-width','2.2');
+      svg.appendChild(path);
+      var endLbl = document.createElementNS('http://www.w3.org/2000/svg','text');
+      endLbl.setAttribute('x', pts[pts.length-1][0]); endLbl.setAttribute('y', pts[pts.length-1][1] - 7);
+      endLbl.setAttribute('text-anchor','end'); endLbl.setAttribute('class','series-label'); endLbl.setAttribute('fill', s.color);
+      endLbl.textContent = s.data[s.data.length-1];
+      svg.appendChild(endLbl);
+    });
+
+    years.forEach(function(yr,i){
+      if(i % 2 !== 0 && i !== years.length-1) return;
+      var t = document.createElementNS('http://www.w3.org/2000/svg','text');
+      t.setAttribute('x', padL + (i/(years.length-1))*plotW); t.setAttribute('y', h-6); t.setAttribute('text-anchor','middle');
+      t.setAttribute('class','axislabel'); t.textContent = "'" + yr;
+      svg.appendChild(t);
+    });
+
+    var crosshair = document.createElementNS('http://www.w3.org/2000/svg','line');
+    crosshair.setAttribute('y1', padT); crosshair.setAttribute('y2', padT+plotH); crosshair.setAttribute('class','crosshair');
+    svg.appendChild(crosshair);
+    var dots = series.map(function(s){
+      var c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      c.setAttribute('r','3.6'); c.setAttribute('fill', s.color); c.setAttribute('class','hoverdot');
+      svg.appendChild(c); return c;
+    });
+
+    var tooltip = document.getElementById('strength-tooltip');
+    var overlay = document.createElementNS('http://www.w3.org/2000/svg','rect');
+    overlay.setAttribute('x', padL); overlay.setAttribute('y', 0); overlay.setAttribute('width', plotW); overlay.setAttribute('height', h);
+    overlay.setAttribute('fill','transparent');
+    svg.appendChild(overlay);
+
+    overlay.addEventListener('mousemove', function(e){
+      var rect = svg.getBoundingClientRect();
+      var scaleX = w / rect.width;
+      var mx = (e.clientX - rect.left) * scaleX;
+      var i = Math.round((mx - padL) / plotW * (years.length-1));
+      i = Math.max(0, Math.min(years.length-1, i));
+      crosshair.setAttribute('x1', allPts[0][i][0]); crosshair.setAttribute('x2', allPts[0][i][0]); crosshair.style.opacity = 1;
+      var scaleDisp = rect.width / w;
+      dots.forEach(function(dot, si){
+        dot.setAttribute('cx', allPts[si][i][0]); dot.setAttribute('cy', allPts[si][i][1]); dot.style.opacity = 1;
+      });
+      tooltip.style.left = (allPts[0][i][0]*scaleDisp) + 'px';
+      tooltip.style.top = (Math.min(allPts[0][i][1],allPts[1][i][1],allPts[2][i][1])*scaleDisp) + 'px';
+      tooltip.innerHTML = 'AY ' + years[i] + '<br>Start <b>' + boy[i] + '</b> · End <b>' + eoy[i] + '</b> · Resigned <b>' + res[i] + '</b>';
+      tooltip.style.opacity = 1;
+    });
+    overlay.addEventListener('mouseleave', function(){
+      crosshair.style.opacity = 0; dots.forEach(function(d){ d.style.opacity = 0; }); tooltip.style.opacity = 0;
+    });
+  })();
+
+  // ---------- Staff table ----------
+  var staff = [
+    {id:'FSKS1601', name:'Meera Kulkarni', group:'Junior School', designation:'EY Teacher', dept:'EY', doj:'2019-05-01', age:29, tenure:'7y 4m'},
+    {id:'FSKS1298', name:'Rhea Vashisht', group:'Senior School', designation:'MYP Science Teacher', dept:'MYP', doj:'2023-03-15', age:26, tenure:'3y 5m'},
+    {id:'FSKS1142', name:'Divya Solanki', group:'Junior School', designation:'PYP Teacher', dept:'PYP', doj:'2022-03-02', age:30, tenure:'4y 6m'},
+    {id:'FSKS1109', name:'Kabir Mistry', group:'Senior School', designation:'MLC Facilitator', dept:'MLC', doj:'2022-02-07', age:46, tenure:'4y 7m'},
+    {id:'FSKS812', name:'Ananya Deshpande', group:'Administration', designation:'Ops. Team Leader — Events', dept:'Services', doj:'2019-03-01', age:37, tenure:'7y 6m'},
+    {id:'FSKS1440', name:'Yusuf Merchant', group:'Administration', designation:'Ops. Executive — HR', dept:'HR', doj:'2025-04-15', age:29, tenure:'1y 4m'},
+    {id:'FSKS1390', name:'Simran Kaur', group:'Senior School', designation:'DP Chemistry Teacher', dept:'DP', doj:'2024-10-25', age:26, tenure:'1y 10m'},
+    {id:'PSPL578', name:'Arjun Nair', group:'Administration', designation:'Software Developer', dept:'Operations', doj:'2025-09-22', age:29, tenure:'0y 11m'},
+    {id:'PSPL531', name:'Farah Sheikh', group:'Administration', designation:'Ops. Executive — Projects', dept:'Founders Team', doj:'2025-08-04', age:25, tenure:'1y 1m'},
+    {id:'FSKS1345', name:'Om Trivedi', group:'Junior School', designation:'PYP Music Teacher', dept:'PYP', doj:'2024-04-01', age:22, tenure:'2y 5m'},
+    {id:'FSKS1522', name:'Neha Bhatt', group:'Senior School', designation:'SS Librarian', dept:'MYP', doj:'2020-06-11', age:33, tenure:'6y 2m'},
+    {id:'FSKS1301', name:'Rohan Kapoor', group:'Junior School', designation:'PYP Homeroom Teacher', dept:'PYP', doj:'2021-07-19', age:31, tenure:'5y 1m'}
+  ];
+  var sortState = { key:'name', dir:1 };
+  var page = 0, pageSize = 5;
+
+  function renderStaff(){
+    var q = document.getElementById('staff-search').value.toLowerCase();
+    var rows = staff.filter(function(s){
+      return !q || (s.name+s.designation+s.dept+s.group).toLowerCase().indexOf(q) !== -1;
+    });
+    rows.sort(function(a,b){
+      var av=a[sortState.key], bv=b[sortState.key];
+      if(typeof av === 'number') return (av-bv)*sortState.dir;
+      return String(av).localeCompare(String(bv))*sortState.dir;
+    });
+    var totalPages = Math.max(1, Math.ceil(rows.length/pageSize));
+    page = Math.min(page, totalPages-1);
+    var slice = rows.slice(page*pageSize, page*pageSize+pageSize);
+
+    var tbody = document.querySelector('#staff-table tbody');
+    tbody.innerHTML = '';
+    slice.forEach(function(s){
+      var tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td class="id-cell">'+s.id+'</td>' +
+        '<td>'+s.name+'</td>' +
+        '<td>'+s.group+'</td>' +
+        '<td>'+s.designation+'</td>' +
+        '<td>'+s.dept+'</td>' +
+        '<td class="mono">'+s.doj+'</td>' +
+        '<td class="tnum">'+s.age+'</td>' +
+        '<td class="tnum">'+s.tenure+'</td>';
+      tbody.appendChild(tr);
+    });
+
+    document.getElementById('staff-count').textContent = rows.length + ' of 440 staff shown (sample data)';
+    var pager = document.getElementById('staff-pager');
+    pager.innerHTML = '';
+    var prev = document.createElement('button'); prev.textContent = '←'; prev.disabled = page===0;
+    prev.addEventListener('click', function(){ page--; renderStaff(); });
+    pager.appendChild(prev);
+    for(var i=0;i<totalPages;i++){
+      var b = document.createElement('button'); b.textContent = i+1;
+      if(i===page) b.classList.add('active');
+      (function(idx){ b.addEventListener('click', function(){ page = idx; renderStaff(); }); })(i);
+      pager.appendChild(b);
+    }
+    var next = document.createElement('button'); next.textContent = '→'; next.disabled = page>=totalPages-1;
+    next.addEventListener('click', function(){ page++; renderStaff(); });
+    pager.appendChild(next);
+  }
+
+  document.querySelectorAll('#staff-table thead th').forEach(function(th){
+    th.addEventListener('click', function(){
+      var key = th.dataset.key;
+      if(sortState.key === key) sortState.dir *= -1; else { sortState.key = key; sortState.dir = 1; }
+      document.querySelectorAll('#staff-table thead th').forEach(function(o){ o.classList.remove('sorted'); o.querySelector('.arrow') && o.querySelector('.arrow').remove(); });
+      th.classList.add('sorted');
+      var arrow = document.createElement('span'); arrow.className='arrow'; arrow.textContent = sortState.dir===1 ? '▲' : '▼';
+      th.appendChild(arrow);
+      renderStaff();
+    });
+  });
+  document.getElementById('staff-search').addEventListener('input', function(){ page = 0; renderStaff(); });
+  renderStaff();
+
+  // ---------- Recruitment: status + interest bars ----------
+  var statusData = [
+    {name:'Rejected', value:2310},
+    {name:'Retain for future', value:1427},
+    {name:'Application received', value:809},
+    {name:'Under review / in process', value:785},
+    {name:'Joined', value:397},
+    {name:'Withdrawn by candidate', value:334},
+    {name:'Candidate decision pending', value:2},
+    {name:'Technical round reject', value:1},
+    {name:'Hold', value:1}
+  ];
+  var statusMax = statusData[0].value;
+  var statusList = document.getElementById('recruit-status-list');
+  statusData.forEach(function(d){
+    var row = document.createElement('div');
+    row.className = 'bar-row';
+    row.innerHTML = '<span class="name">' + d.name + '</span>' +
+      '<div class="bar-track"><div class="bar-fill" style="width:' + Math.max(d.value/statusMax*100,1.2) + '%; background:var(--accent);"></div></div>' +
+      '<span class="val tnum">' + d.value.toLocaleString() + '</span>';
+    statusList.appendChild(row);
+  });
+
+  var interestData = [
+    {name:'1st–6th grade, PYP', value:977},
+    {name:'MYP Mathematics', value:274},
+    {name:'PYP Homeroom', value:203},
+    {name:'DP Business Mgmt.', value:151},
+    {name:'Nursery–Sr. K.G.', value:144},
+    {name:'Career Counselor', value:133},
+    {name:'MYP Hindi', value:133},
+    {name:'All other interests', value:3804}
+  ];
+  var interestMax = Math.max.apply(null, interestData.map(function(d){ return d.value; }));
+  var interestList = document.getElementById('interest-list');
+  interestData.forEach(function(d){
+    var row = document.createElement('div');
+    row.className = 'bar-row';
+    row.innerHTML = '<span class="name">' + d.name + '</span>' +
+      '<div class="bar-track"><div class="bar-fill" style="width:' + (d.value/interestMax*100) + '%; background:var(--cat-2);"></div></div>' +
+      '<span class="val tnum">' + d.value.toLocaleString() + '</span>';
+    interestList.appendChild(row);
+  });
+
+  // ---------- Candidate pipeline table ----------
+  var statusMeta = {
+    'Joined':'good', 'Rejected':'critical', 'Technical Round Reject':'critical',
+    'Withdrawn by Candidate':'warning', 'Application Received':'neutral',
+    'Under Review':'neutral', 'Retain For Future':'neutral', 'Hold':'neutral'
+  };
+  var candidates = [
+    {name:'Zara Ahmed', position:'Administration', interest:'Admin Executive (Vapi)', applied:'2026-09-23', status:'Rejected', phone:'6391176295'},
+    {name:'Kavita Desai', position:'Administration', interest:'Accountant (Vapi)', applied:'2026-09-22', status:'Rejected', phone:'8460141711'},
+    {name:'Anjali Rao', position:'Junior School', interest:'EY Home Room Teacher', applied:'2026-09-10', status:'Application Received', phone:'9978338982'},
+    {name:'Priya Malhotra', position:'Junior School', interest:'PYP Home Room Teacher', applied:'2026-09-10', status:'Joined', phone:'8849309863'},
+    {name:'Imran Sheikh', position:'Administration', interest:'Safety Officer', applied:'2026-09-10', status:'Application Received', phone:'9894741258'},
+    {name:'Devika Pillai', position:'Senior School', interest:'MYP Mathematics', applied:'2026-09-09', status:'Application Received', phone:'8849997064'},
+    {name:'Sameer Joshi', position:'Administration', interest:'Human Resource Executive', applied:'2026-09-09', status:'Application Received', phone:'9099669480'},
+    {name:'Ritu Bhandari', position:'Senior School', interest:'Mathematics — 9 & 10', applied:'2026-09-09', status:'Rejected', phone:'9974695948'},
+    {name:'Manav Chawla', position:'Administration', interest:'Safety Officer', applied:'2026-09-09', status:'Application Received', phone:'8511267627'},
+    {name:'Tanvi Oberoi', position:'Senior School', interest:'English Literature 7–8', applied:'2026-09-07', status:'Withdrawn by Candidate', phone:'9654716202'}
+  ];
+  var candSort = { key:'applied', dir:-1 }, candPage = 0, candPageSize = 5;
+
+  function maskPhone(p){ return '•••• ••' + p.slice(-4); }
+
+  function renderCandidates(){
+    var q = document.getElementById('candidate-search').value.toLowerCase();
+    var rows = candidates.filter(function(c){
+      return !q || (c.name+c.position+c.interest).toLowerCase().indexOf(q) !== -1;
+    });
+    rows.sort(function(a,b){
+      var av=a[candSort.key], bv=b[candSort.key];
+      return String(av).localeCompare(String(bv))*candSort.dir;
+    });
+    var totalPages = Math.max(1, Math.ceil(rows.length/candPageSize));
+    candPage = Math.min(candPage, totalPages-1);
+    var slice = rows.slice(candPage*candPageSize, candPage*candPageSize+candPageSize);
+
+    var tbody = document.querySelector('#candidate-table tbody');
+    tbody.innerHTML = '';
+    slice.forEach(function(c){
+      var tr = document.createElement('tr');
+      var tone = statusMeta[c.status] || 'neutral';
+      tr.innerHTML =
+        '<td>'+c.name+'</td>' +
+        '<td>'+c.position+'</td>' +
+        '<td>'+c.interest+'</td>' +
+        '<td class="mono">'+c.applied+'</td>' +
+        '<td><span class="status-pill '+tone+'">'+c.status+'</span></td>' +
+        '<td><span class="masked" data-phone="'+c.phone+'">'+maskPhone(c.phone)+'<button class="reveal-btn">Reveal</button></span></td>';
+      tbody.appendChild(tr);
+    });
+    tbody.querySelectorAll('.reveal-btn').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var wrap = btn.parentElement;
+        wrap.firstChild.textContent = wrap.dataset.phone + ' ';
+        btn.remove();
+      });
+    });
+
+    document.getElementById('candidate-count').textContent = rows.length + ' of 6,066 applications shown (sample data)';
+    var pager = document.getElementById('candidate-pager');
+    pager.innerHTML = '';
+    var prev = document.createElement('button'); prev.textContent='←'; prev.disabled = candPage===0;
+    prev.addEventListener('click', function(){ candPage--; renderCandidates(); });
+    pager.appendChild(prev);
+    for(var i=0;i<totalPages;i++){
+      var b = document.createElement('button'); b.textContent = i+1;
+      if(i===candPage) b.classList.add('active');
+      (function(idx){ b.addEventListener('click', function(){ candPage = idx; renderCandidates(); }); })(i);
+      pager.appendChild(b);
+    }
+    var next = document.createElement('button'); next.textContent='→'; next.disabled = candPage>=totalPages-1;
+    next.addEventListener('click', function(){ candPage++; renderCandidates(); });
+    pager.appendChild(next);
+  }
+  document.querySelectorAll('#candidate-table thead th[data-key]').forEach(function(th){
+    th.addEventListener('click', function(){
+      var key = th.dataset.key;
+      if(candSort.key === key) candSort.dir *= -1; else { candSort.key = key; candSort.dir = 1; }
+      document.querySelectorAll('#candidate-table thead th').forEach(function(o){ o.classList.remove('sorted'); o.querySelector('.arrow') && o.querySelector('.arrow').remove(); });
+      th.classList.add('sorted');
+      var arrow = document.createElement('span'); arrow.className='arrow'; arrow.textContent = candSort.dir===1 ? '▲' : '▼';
+      th.appendChild(arrow);
+      renderCandidates();
+    });
+  });
+  document.getElementById('candidate-search').addEventListener('input', function(){ candPage = 0; renderCandidates(); });
+  renderCandidates();
+
+  // ---------- New joinees roster ----------
+  var joinees = [
+    {id:'PSPL675', name:'Karan Vora', doj:'2026-09-07', group:'Administration', dept:'Founders Team (FT)', designation:'Process Coordinator', done:3, total:6},
+    {id:'FSKS1609', name:'Ishita Nanda', doj:'2026-09-10', group:'Junior School', dept:'PYP', designation:'PYP Trainee Teacher', done:6, total:6},
+    {id:'FSKS1605', name:'Naina Kohli', doj:'2026-09-02', group:'Junior School', dept:'PYP', designation:'PYP Trainee Teacher', done:6, total:6},
+    {id:'FSKS1604', name:'Ritika Bhasin', doj:'2026-09-02', group:'Junior School', dept:'PYP', designation:'PYP Trainee Teacher', done:5, total:6},
+    {id:'FSKS1608', name:'Aman Kher', doj:'2026-09-07', group:'Senior School', dept:'MYP', designation:'MYP Integrated Science Teacher', done:2, total:6},
+    {id:'FSKS1607', name:'Tara Sethi', doj:'2026-09-03', group:'Senior School', dept:'MYP', designation:'MYP Mathematics Teacher', done:4, total:6},
+    {id:'FSKS1606', name:'Yash Chhabra', doj:'2026-09-02', group:'Senior School', dept:'MYP', designation:'SS Wellbeing Coordinator', done:1, total:6}
+  ];
+  var joineeBody = document.getElementById('joinee-tbody');
+  joinees.forEach(function(j){
+    var pct = Math.round(j.done/j.total*100);
+    var tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td class="id-cell">'+j.id+'</td>' +
+      '<td>'+j.name+'</td>' +
+      '<td class="mono">'+j.doj+'</td>' +
+      '<td>'+j.group+'</td>' +
+      '<td>'+j.dept+'</td>' +
+      '<td>'+j.designation+'</td>' +
+      '<td><div class="onboard"><div class="onboard-track"><div class="onboard-fill" style="width:'+pct+'%; background:'+(pct===100?'var(--good)':'var(--cat-2)')+';"></div></div><span class="onboard-frac">'+j.done+'/'+j.total+'</span></div></td>';
+    joineeBody.appendChild(tr);
+  });
+})();
+</script>
+</body>
+</html>
