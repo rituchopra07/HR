@@ -114,11 +114,28 @@
 
   .rail-block{ display:flex; flex-direction:column; gap:8px; }
   .rail-label{ font-size:10.5px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--ink-2); }
-  .filters{ display:flex; flex-direction:column; gap:10px; }
+  .filters{ display:flex; flex-direction:column; gap:14px; }
   .filters label{ display:flex; flex-direction:column; gap:4px; font-size:12px; color:var(--ink-2); font-weight:600; }
   select{
     font:inherit; font-family:"Public Sans"; font-size:12.5px; color:var(--ink);
     background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:7px 8px;
+  }
+  select:disabled{ opacity:.5; cursor:not-allowed; }
+
+  /* Entity checkbox group */
+  .filter-block{ display:flex; flex-direction:column; gap:6px; }
+  .filter-block > .filter-label{ font-size:12px; color:var(--ink-2); font-weight:600; }
+  .checkbox-group{ display:flex; flex-direction:column; gap:6px; }
+  .filters .checkbox-row{ flex-direction:row; align-items:center; gap:7px; font-size:12.5px; color:var(--ink); font-weight:500; cursor:pointer; }
+  .checkbox-row input[type="checkbox"]{ accent-color:var(--accent); width:14px; height:14px; margin:0; cursor:pointer; flex:none; }
+  .checkbox-row.all-row{ padding-bottom:6px; border-bottom:1px solid var(--line); margin-bottom:2px; font-weight:700; }
+
+  /* Custom date-range controls */
+  .custom-range{ display:none; gap:6px; margin-top:6px; }
+  .custom-range.open{ display:flex; }
+  .custom-range input[type="date"]{
+    font:inherit; font-family:"IBM Plex Mono"; font-size:11.5px; color:var(--ink);
+    background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:6px 6px; flex:1; min-width:0;
   }
   select:focus-visible, button:focus-visible, summary:focus-visible, input:focus-visible{
     outline:2px solid var(--cat-3); outline-offset:2px;
@@ -277,8 +294,11 @@
   .callout b{ color:var(--ink); }
 
   /* Local (page-scoped) filter row */
-  .local-filters{ display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
+  .local-filters{ display:flex; gap:10px; flex-wrap:wrap; align-items:flex-start; margin-bottom:16px; }
   .local-filters select{ font-size:12px; padding:7px 9px; }
+  .local-filter-item{ display:flex; flex-direction:column; }
+  .local-filter-item .custom-range{ margin-top:6px; }
+  .local-filter-item .custom-range input[type="date"]{ font-size:11px; padding:6px; }
 
   /* Status pills (recruitment) */
   .status-pill{ display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:99px; font-size:10.5px; font-weight:700; white-space:nowrap; }
@@ -348,20 +368,41 @@
       <div class="filters">
         <label>Academic Year
           <select id="f-year">
-            <option>AY 2026–27</option>
-            <option>AY 2025–26</option>
+            <option value="2026-27">AY 2026–27</option>
+            <option value="2025-26">AY 2025–26</option>
+            <option value="custom">Custom range…</option>
           </select>
         </label>
-        <label>Entity
-          <select id="f-entity">
-            <option value="all">All entities</option>
-            <option value="FSK">FSK</option>
-            <option value="FSM">FSM</option>
-            <option value="FPV">FPV</option>
-            <option value="FPA">FPA</option>
-            <option value="FWGS">FWGS</option>
+        <div class="custom-range" id="f-year-custom">
+          <input type="date" id="f-year-from" aria-label="Academic year start date">
+          <input type="date" id="f-year-to" aria-label="Academic year end date">
+        </div>
+
+        <div class="filter-block">
+          <span class="filter-label">Entity</span>
+          <div class="checkbox-group" id="f-entity-group">
+            <label class="checkbox-row all-row"><input type="checkbox" id="f-entity-all" checked> All entities</label>
+            <label class="checkbox-row"><input type="checkbox" class="f-entity-item" value="FSK" checked> FSK</label>
+            <label class="checkbox-row"><input type="checkbox" class="f-entity-item" value="FSM" checked> FSM</label>
+            <label class="checkbox-row"><input type="checkbox" class="f-entity-item" value="FPV" checked> FPV</label>
+            <label class="checkbox-row"><input type="checkbox" class="f-entity-item" value="FPA" checked> FPA</label>
+            <label class="checkbox-row"><input type="checkbox" class="f-entity-item" value="FWGS" checked> FWGS</label>
+          </div>
+        </div>
+
+        <label>State
+          <select id="f-state">
+            <option value="all">All states</option>
+            <option value="Maharashtra">Maharashtra</option>
+            <option value="Gujarat">Gujarat</option>
           </select>
         </label>
+        <label>City
+          <select id="f-city">
+            <option value="all">All cities</option>
+          </select>
+        </label>
+
         <label>Group
           <select id="f-group">
             <option value="all">All groups</option>
@@ -725,7 +766,18 @@
     <!-- ============ NEW JOINEES ============ -->
     <section id="tab-newjoinees" class="tab-panel">
       <div class="local-filters">
-        <select><option>Sep 1 – Sep 30, 2026</option><option>Aug 1 – Aug 31, 2026</option><option>Jul 1 – Jul 31, 2026</option></select>
+        <div class="local-filter-item">
+          <select id="joinees-range">
+            <option>Sep 1 – Sep 30, 2026</option>
+            <option>Aug 1 – Aug 31, 2026</option>
+            <option>Jul 1 – Jul 31, 2026</option>
+            <option value="custom">Custom range…</option>
+          </select>
+          <div class="custom-range" id="joinees-range-custom">
+            <input type="date" aria-label="New joinees window start date">
+            <input type="date" aria-label="New joinees window end date">
+          </div>
+        </div>
       </div>
 
       <div class="kpi-row">
@@ -787,7 +839,18 @@
     <!-- ============ HR TICKETS ============ -->
     <section id="tab-tickets" class="tab-panel">
       <div class="local-filters">
-        <select><option>Sep 7 – Sep 13, 2026</option><option>Aug 31 – Sep 6, 2026</option><option>Sep 14 – Sep 20, 2026</option></select>
+        <div class="local-filter-item">
+          <select id="tickets-range">
+            <option>Sep 7 – Sep 13, 2026</option>
+            <option>Aug 31 – Sep 6, 2026</option>
+            <option>Sep 14 – Sep 20, 2026</option>
+            <option value="custom">Custom range…</option>
+          </select>
+          <div class="custom-range" id="tickets-range-custom">
+            <input type="date" aria-label="Ticket window start date">
+            <input type="date" aria-label="Ticket window end date">
+          </div>
+        </div>
       </div>
 
       <div class="kpi-row">
@@ -1031,6 +1094,57 @@
       }
     });
   });
+
+  // ---------- Custom date-range reveal (Academic Year, New Joinees, Tickets) ----------
+  function wireCustomRange(selectId, panelId){
+    var sel = document.getElementById(selectId);
+    var panel = document.getElementById(panelId);
+    if(!sel || !panel) return;
+    sel.addEventListener('change', function(){
+      panel.classList.toggle('open', sel.value === 'custom');
+    });
+  }
+  wireCustomRange('f-year', 'f-year-custom');
+  wireCustomRange('joinees-range', 'joinees-range-custom');
+  wireCustomRange('tickets-range', 'tickets-range-custom');
+
+  // ---------- Entity checkbox group (master + children) ----------
+  (function(){
+    var all = document.getElementById('f-entity-all');
+    var items = document.querySelectorAll('.f-entity-item');
+    all.addEventListener('change', function(){
+      items.forEach(function(cb){ cb.checked = all.checked; });
+    });
+    items.forEach(function(cb){
+      cb.addEventListener('change', function(){
+        var everyChecked = Array.prototype.every.call(items, function(c){ return c.checked; });
+        all.checked = everyChecked;
+      });
+    });
+  })();
+
+  // ---------- State → City cascade ----------
+  var STATE_CITIES = {
+    all: ['All cities'],
+    Maharashtra: ['All cities', 'Mumbai', 'Kalyan', 'Thane'],
+    Gujarat: ['All cities', 'Vadodara', 'Ahmedabad', 'Surat', 'Vapi']
+  };
+  (function(){
+    var stateSel = document.getElementById('f-state');
+    var citySel = document.getElementById('f-city');
+    function populateCities(state){
+      var cities = STATE_CITIES[state] || STATE_CITIES.all;
+      citySel.innerHTML = '';
+      cities.forEach(function(c){
+        var opt = document.createElement('option');
+        opt.value = c === 'All cities' ? 'all' : c;
+        opt.textContent = c;
+        citySel.appendChild(opt);
+      });
+    }
+    stateSel.addEventListener('change', function(){ populateCities(stateSel.value); });
+    populateCities('all');
+  })();
 
   // ---------- Department chart ----------
   var deptData = [
