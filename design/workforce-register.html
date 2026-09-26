@@ -1074,14 +1074,25 @@
 (function(){
   // ---------- Tabs ----------
   var tabBtns = document.querySelectorAll('.tab-btn');
+  function activateTab(name){
+    var btn = document.querySelector('.tab-btn[data-tab="' + name + '"]');
+    var panel = document.getElementById('tab-' + name);
+    if(!btn || !panel) return false;
+    tabBtns.forEach(function(b){ b.classList.remove('active'); });
+    btn.classList.add('active');
+    document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
+    panel.classList.add('active');
+    return true;
+  }
   tabBtns.forEach(function(btn){
     btn.addEventListener('click', function(){
-      tabBtns.forEach(function(b){ b.classList.remove('active'); });
-      btn.classList.add('active');
-      document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
-      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+      activateTab(btn.dataset.tab);
+      if(history.replaceState){ history.replaceState(null, '', '#' + btn.dataset.tab); }
     });
   });
+  // Open the tab named in the URL hash (deep-link from the portal), and respond to hash changes.
+  if(location.hash){ activateTab(location.hash.slice(1)); }
+  window.addEventListener('hashchange', function(){ if(location.hash){ activateTab(location.hash.slice(1)); } });
 
   // ---------- Redesign notes toggle ----------
   document.getElementById('notes-toggle').addEventListener('change', function(e){
