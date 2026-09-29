@@ -149,6 +149,28 @@
   .callout{ border:1px dashed var(--line); border-radius:var(--radius); padding:16px 18px; font-size:12.5px; color:var(--ink-2); background:var(--surface); }
   .callout b{ color:var(--ink); }
 
+  /* Policies accordion (dropdown categories) */
+  .policy-list{ display:flex; flex-direction:column; gap:10px; max-width:860px; }
+  details.policy{ background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden; }
+  details.policy > summary{
+    list-style:none; cursor:pointer; padding:15px 18px; display:flex; align-items:center; gap:12px;
+    font-family:"Fraunces", serif; font-weight:600; font-size:16px; color:var(--ink);
+  }
+  details.policy > summary::-webkit-details-marker{ display:none; }
+  details.policy > summary .pico{ width:32px; height:32px; border-radius:8px; background:var(--surface-2); display:flex; align-items:center; justify-content:center; font-size:16px; flex:none; }
+  details.policy > summary .count{ margin-left:auto; font-size:11px; font-weight:700; color:var(--ink-2); background:var(--surface-2); border:1px solid var(--line); padding:3px 9px; border-radius:99px; font-family:"IBM Plex Mono"; }
+  details.policy > summary .chev{ transition:transform .18s; color:var(--ink-2); font-size:12px; }
+  details.policy[open] > summary .chev{ transform:rotate(90deg); }
+  details.policy[open] > summary{ border-bottom:1px solid var(--line); }
+  .policy-body{ padding:6px 18px 14px; display:flex; flex-direction:column; }
+  .doc-row{ display:flex; align-items:center; gap:10px; padding:10px 4px; border-bottom:1px solid var(--line); font-size:13px; }
+  .doc-row:last-child{ border-bottom:none; }
+  .doc-row .dico{ color:var(--ink-2); font-size:14px; flex:none; }
+  .doc-row .dname{ font-weight:600; color:var(--ink); }
+  .doc-row .dstate{ margin-left:auto; font-size:10px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--ink-2); background:var(--surface-2); border:1px solid var(--line); padding:3px 8px; border-radius:99px; }
+  .doc-row .dstate.ready{ color:var(--good); background:color-mix(in srgb, var(--good) 12%, transparent); border-color:transparent; }
+  .policy-hint{ font-size:11.5px; color:var(--ink-2); padding:8px 4px 0; }
+
   /* Employee restricted banner */
   .restricted{ display:flex; gap:12px; align-items:flex-start; background:var(--surface); border:1px solid var(--line); border-left:3px solid var(--accent); border-radius:var(--radius); padding:16px 18px; box-shadow:var(--shadow); }
   .restricted .big{ font-size:22px; }
@@ -318,13 +340,66 @@
         </div>
         <div class="scope-note">Visible to <b>all employees</b></div>
       </div>
-      <div class="card-grid">
-        <div class="card soon"><div class="ico">📕</div><h3>HR Handbook</h3><p>The complete employee handbook.</p><div class="card-foot">Placeholder</div></div>
-        <div class="card soon"><div class="ico">🧭</div><h3>HR Survival Guide</h3><p>Quick-start guide for new and existing staff.</p><div class="card-foot">Placeholder</div></div>
-        <div class="card soon"><div class="ico">📜</div><h3>Policies Library</h3><p>Leave, attendance, conduct, POSH and more — with drop-downs.</p><div class="card-foot">Placeholder</div></div>
-        <div class="card soon"><div class="ico">📥</div><h3>Forms &amp; Templates</h3><p>Downloadable HR forms and request templates.</p><div class="card-foot">Placeholder</div></div>
+      <div class="policy-list" id="policyList">
+        <details class="policy" open>
+          <summary><span class="pico">📕</span> HR Handbook <span class="count">0 docs</span><span class="chev">▶</span></summary>
+          <div class="policy-body">
+            <div class="doc-row"><span class="dico">📄</span><span class="dname">Employee Handbook 2026–27</span><span class="dstate">To upload</span></div>
+            <div class="policy-hint">Ritu will upload the handbook here. Sub-documents can be added as separate rows.</div>
+          </div>
+        </details>
+
+        <details class="policy">
+          <summary><span class="pico">🧭</span> HR Survival Guide <span class="count">0 docs</span><span class="chev">▶</span></summary>
+          <div class="policy-body">
+            <div class="doc-row"><span class="dico">📄</span><span class="dname">New Joinee Survival Guide</span><span class="dstate">To upload</span></div>
+            <div class="policy-hint">Quick-start guide for new and existing staff.</div>
+          </div>
+        </details>
+
+        <details class="policy">
+          <summary><span class="pico">🌴</span> Leave &amp; Attendance <span class="count">0 docs</span><span class="chev">▶</span></summary>
+          <div class="policy-body">
+            <div class="doc-row"><span class="dico">📄</span><span class="dname">Leave Policy</span><span class="dstate">To upload</span></div>
+            <div class="doc-row"><span class="dico">📄</span><span class="dname">Attendance &amp; Working Hours Policy</span><span class="dstate">To upload</span></div>
+          </div>
+        </details>
+
+        <details class="policy">
+          <summary><span class="pico">⚖️</span> Code of Conduct &amp; POSH <span class="count">0 docs</span><span class="chev">▶</span></summary>
+          <div class="policy-body">
+            <div class="doc-row"><span class="dico">📄</span><span class="dname">Code of Conduct</span><span class="dstate">To upload</span></div>
+            <div class="doc-row"><span class="dico">📄</span><span class="dname">POSH Policy &amp; Committee</span><span class="dstate">To upload</span></div>
+            <div class="doc-row"><span class="dico">📄</span><span class="dname">Grievance Redressal</span><span class="dstate">To upload</span></div>
+          </div>
+        </details>
+
+        <details class="policy">
+          <summary><span class="pico">💰</span> Payroll &amp; Benefits <span class="count">0 docs</span><span class="chev">▶</span></summary>
+          <div class="policy-body">
+            <div class="doc-row"><span class="dico">📄</span><span class="dname">Payroll &amp; Reimbursement Policy</span><span class="dstate">To upload</span></div>
+            <div class="doc-row"><span class="dico">📄</span><span class="dname">Benefits &amp; Insurance</span><span class="dstate">To upload</span></div>
+          </div>
+        </details>
+
+        <details class="policy">
+          <summary><span class="pico">🚪</span> Onboarding &amp; Exit <span class="count">0 docs</span><span class="chev">▶</span></summary>
+          <div class="policy-body">
+            <div class="doc-row"><span class="dico">📄</span><span class="dname">Onboarding Checklist</span><span class="dstate">To upload</span></div>
+            <div class="doc-row"><span class="dico">📄</span><span class="dname">Exit &amp; Full-and-Final Process</span><span class="dstate">To upload</span></div>
+          </div>
+        </details>
+
+        <details class="policy">
+          <summary><span class="pico">📥</span> Forms &amp; Templates <span class="count">0 docs</span><span class="chev">▶</span></summary>
+          <div class="policy-body">
+            <div class="doc-row"><span class="dico">📎</span><span class="dname">Leave Application Form</span><span class="dstate">To upload</span></div>
+            <div class="doc-row"><span class="dico">📎</span><span class="dname">Reimbursement Claim Form</span><span class="dstate">To upload</span></div>
+            <div class="doc-row"><span class="dico">📎</span><span class="dname">No-Objection / Verification Templates</span><span class="dstate">To upload</span></div>
+          </div>
+        </details>
       </div>
-      <div class="callout"><b>Note:</b> This is what gets shared with employees to replace the cluttered Drive. Documents to be uploaded into per-topic drop-downs.</div>
+      <div class="callout" style="margin-top:16px;"><b>How this works:</b> Each dropdown is a category. Ritu adds documents as rows inside — this replaces the cluttered Drive. Employees only see this page; reports stay Director/HR-only.</div>
     </section>
 
   </main>
@@ -337,7 +412,7 @@
     hiring:     ['Workforce Register','Recruitment Dashboard','Onboarding Checklist','Monthly Hiring Report'],
     exit:       ['Attrition Report','Exit Register','Exit Interview Insights','F&F Settlement Tracker'],
     compliance: ['Compliance Dashboard','Compliance Checklists','Statutory Documents','Audit Calendar'],
-    policies:   ['HR Handbook','HR Survival Guide','Policies Library','Forms & Templates']
+    policies:   ['HR Handbook','HR Survival Guide','Leave & Attendance','Code of Conduct & POSH','Payroll & Benefits','Onboarding & Exit','Forms & Templates']
   };
   var navBtns = document.querySelectorAll('.nav-btn');
   var subNav = document.getElementById('subNav');
@@ -351,6 +426,17 @@
       b.addEventListener('click', function(){
         subNav.querySelectorAll('.sub-link').forEach(function(x){ x.classList.remove('active'); });
         b.classList.add('active');
+        // In Policies, open + scroll to the matching dropdown.
+        if(key === 'policies'){
+          var summaries = document.querySelectorAll('#policyList details.policy > summary');
+          summaries.forEach(function(s){
+            if(s.textContent.replace(/\s+/g,' ').indexOf(name) !== -1){
+              var d = s.parentElement;
+              d.open = true;
+              d.scrollIntoView({behavior:'smooth', block:'start'});
+            }
+          });
+        }
       });
       subNav.appendChild(b);
     });
