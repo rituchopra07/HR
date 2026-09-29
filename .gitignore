@@ -7,4 +7,6 @@ dist/
 
 # HR data exporter — local connection config & caches (never commit credentials)
 tools/sources.json
+# raw compliance tracker backups (item-level statuses, remarks, names) — only aggregates are published
+tools/private/
 __pycache__/

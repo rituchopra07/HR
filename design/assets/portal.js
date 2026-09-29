@@ -863,33 +863,151 @@
     ["Exit interview form per leaver", "Would rejoin / fit to be rehired", "Themes by campus and section"],
     "The exit-interview table in Nucleus is empty today. Once HR records interviews, they appear here automatically."));
 
-  /* ----- 03 Compliance · Campus compliance (Looker) ----- */
-  view({
-    id: "compliance/campus", sec: "compliance", title: "Campus compliance", tag: "Tracker",
-    lede: "Where each campus stands on labour codes, industrial codes and wages — compliant vs non-compliant.",
-    uses: { period: false, c: true, e: false, g: false },
-    render: function () { return trackerView("compliance"); }
-  });
-  view({
-    id: "compliance/payroll", sec: "compliance", title: "Payroll conditions", tag: "Tracker",
-    lede: "The payroll conditions the HR team works to, by campus and for Protego.",
-    uses: { period: false, c: true, e: false, g: false },
-    render: function () { return trackerView("payroll"); }
-  });
-  function trackerView(kind) {
-    var L = RAW.tracker || {}, block = L[kind] || {};
-    if (L.status !== "ready" || !block.rows || !block.rows.length) {
-      return [h("section", { class: "card" }, h("div", { class: "soon-card" }, h("div", { class: "glyph", text: "C" }),
-        h("div", null, h("h3", { text: "Waiting for the compliance tracker" }),
-          h("p", { text: "This page will show Ritu's C/NC compliance tracker (moved out of Looker) — " + (kind === "compliance" ? "compliance % per campus across labour codes, industrial codes and wages, with the overall score per entity including PSPL." : "the four payroll conditions per campus and for PSPL, with status.") }),
-          h("ul", null, h("li", { text: "Percentages are entered in tools/manual/compliance_tracker.json (aggregates only)" }), h("li", { text: "Re-running the export publishes them here" })))))];
-    }
-    var cols = (kind === "compliance" ? block.areas : block.conditions).map(function (a) { return { key: a, label: a }; });
-    var entities = Array.from(new Set(block.rows.map(function (r) { return r.c; }))).filter(function (c) { return S.campuses.has(c) || ALL_C.indexOf(c) < 0; });
-    var get = function (c, a) { for (var i = 0; i < block.rows.length; i++) { var r = block.rows[i]; if (r.c === c && (r.area === a || r.cond === a)) return r.pct; } return null; };
-    return [card({ title: kind === "compliance" ? "Compliance % by campus and area" : "Payroll conditions met, by campus", hint: "Source: " + (L.source || "compliance tracker") + " · as of " + (L.as_of || "—"),
-      body: heat(entities.map(function (c) { return { key: c, label: c }; }), cols, get, { fmt: function (v) { return fmt(v) + "%"; }, max: 100, lowLabel: "0%", highLabel: "100%", unit: "compliant" }) })];
+  /* ----- 03 Compliance · Ritu's trackers (Labour Codes, POSH, Payroll) ----- */
+  /* Aggregates from tools/export_hr_data.py: category % = C ÷ (C + NC) on each item's latest status,
+     entity % = mean of its category %s — the same maths as the tracker's own dashboard. */
+  var TRK = (RAW && RAW.compliance && RAW.compliance.trackers) || {};
+  var TRK_ORDER = [
+    { id: "labour", route: "compliance/labour", tab: "Statutory Compliance (Labour Codes)", short: "Labour Codes" },
+    { id: "posh", route: "compliance/posh", tab: "POSH Compliance Ledger", short: "POSH" },
+    { id: "payroll_processing", route: "compliance/payroll-processing", tab: "Payroll → Processing Checklist", short: "Payroll processing" },
+    { id: "payroll_kpi", route: "compliance/payroll-kpi", tab: "Payroll → Payroll KPIs", short: "Payroll KPIs" }
+  ];
+  var ENTITY_NAME = { PSPL: "Protego (PSPL)" };
+  function entLabel(e) { return ENTITY_NAME[e] || cLabel(e); }
+  function trkEntities(t) { return (t.entities || []).filter(function (e) { return ALL_C.indexOf(e) < 0 || S.campuses.has(e); }); }
+  /* her colour tiers: 90%+ compliant, 70–89% in progress, below 70% needs attention */
+  function tier(p) { return p == null ? null : p >= 90 ? "good" : p >= 70 ? "warning" : "critical"; }
+  var TIER_LABEL = { good: "Compliant (90%+)", warning: "In progress (70–89%)", critical: "Needs attention (<70%)" };
+  function tierLegend() {
+    return h("div", { class: "legend tier-legend" }, ["good", "warning", "critical"].map(function (k) {
+      return h("span", { class: "it" }, h("i", { class: "sw tier-" + k }), TIER_LABEL[k]);
+    }), h("span", { class: "it" }, h("i", { class: "sw tier-none" }), "No data yet"));
   }
+  function tierCell(p, head, extra) {
+    var k = tier(p);
+    var td = h("td", { class: "cell tcell" + (k ? " tier-" + k : " tier-none"), tabindex: "0" },
+      p == null ? h("span", { class: "tc-empty", text: "—" }) : [h("b", { text: p + "%" }), k === "critical" ? h("span", { class: "tc-flag", "aria-label": "needs attention", text: "!" }) : null]);
+    return tip(td, function () { return { head: head, rows: [{ value: p == null ? "No data yet" : p + "%", label: p == null ? "" : TIER_LABEL[k] }].concat(extra || []) }; });
+  }
+  function trkRow(t, e, ci) { for (var i = 0; i < t.rows.length; i++) if (t.rows[i].e === e && t.rows[i].ci === ci) return t.rows[i]; return null; }
+  function trkStats(t, ents) {
+    var vals = ents.map(function (e) { return t.overall[e]; }).filter(function (v) { return v != null; });
+    return {
+      avg: vals.length ? Math.round(sum(vals) / vals.length) : null, reporting: vals.length,
+      nc: sum(ents, function (e) { return t.flagged[e] || 0; }),
+      good: vals.filter(function (v) { return v >= 90; }).length,
+      items: sum(t.categories, function (c) { return c.n; })
+    };
+  }
+
+  function awaiting(t, meta) {
+    return h("section", { class: "card awaiting" }, h("div", { class: "soon-card" }, h("div", { class: "glyph", text: "↧" }),
+      h("div", null, h("h3", { text: "Waiting for the " + t.title + " backup" }),
+        h("p", { text: "The checklist below is live from Ritu's tracker; the statuses arrive with its JSON backup." }),
+        h("ol", { class: "steps" },
+          h("li", null, "In Ritu's HR tracker, open ", h("b", { text: meta.tab }), " and click the backup / export button."),
+          h("li", null, "Save the downloaded file into ", h("code", { text: "tools/private/trackers/" }), " (never pushed to GitHub)."),
+          h("li", null, "Run ", h("code", { text: "python tools/export_hr_data.py" }), " and publish — only percentages go live.")))));
+  }
+
+  function checklist(t) {
+    return h("div", { class: "policy-list" }, t.categories.map(function (c, ci) {
+      return h("details", { class: "policy" },
+        h("summary", null, h("span", { class: "pico", text: String(ci + 1) }), h("span", { class: "pt" }, h("b", { text: c.title }), h("span", { text: c.n + " check" + (c.n === 1 ? "" : "s") })), h("span", { class: "chev", text: "›" })),
+        c.items ? c.items.map(function (it) { return h("div", { class: "doc-row" }, h("span", { class: "di", text: "◦" }), h("div", { class: "dn", style: { "font-weight": "500" }, text: it }), h("span")); })
+          : h("div", { class: "doc-row" }, h("span", { class: "di", text: "◦" }), h("div", { class: "dm", text: c.n + " recurring payroll tasks — wording kept internal." }), h("span")));
+    }));
+  }
+
+  function trackerPage(meta) {
+    var t = TRK[meta.id];
+    if (!t) return [empty("Tracker definitions not loaded", "Run python tools/export_hr_data.py.")];
+    var ents = trkEntities(t), st = trkStats(t, ents), ready = t.status === "ready";
+    var catCols = t.categories.map(function (c, ci) { return { ci: ci, label: c.title }; });
+    var head = h("tr", null, h("th", { text: "Entity" }), h("th", { class: "num", text: "Overall" }), catCols.map(function (c) { return h("th", { class: "rot", title: c.label }, h("span", { text: c.label })); }));
+    var body = ents.map(function (e) {
+      return h("tr", null, h("td", { class: "ent" }, h("i", { class: "sw", style: { background: CAMPUS_COLOR[e] || "var(--s7)" } }), entLabel(e)),
+        tierCell(t.overall[e] == null ? null : t.overall[e], entLabel(e) + " · overall", [{ value: fmt(t.flagged[e] || 0), label: "non-compliant items" }]),
+        catCols.map(function (c) {
+          var r = trkRow(t, e, c.ci);
+          return tierCell(r ? r.pct : null, entLabel(e) + " · " + c.label, r ? [{ value: r.yes + " / " + (r.yes + r.no), label: "compliant of resolved" }, { value: fmt(r.na), label: "not applicable" }, { value: fmt(r.blank), label: "not yet assessed" }] : []);
+        }));
+    });
+    var matrix = card({ title: "Compliance by entity and category", hint: ready ? "Latest status of each check · as of " + (t.as_of ? dLabel(t.as_of) : "—") : "Fills in when the backup arrives",
+      body: [h("div", { class: "tscroll" }, h("table", { class: "t heat tmatrix" }, h("thead", null, head), h("tbody", null, body))), tierLegend()],
+      table: function () {
+        return { cols: [{ label: "Entity" }, { label: "Overall", num: true }].concat(catCols.map(function (c) { return { label: c.label, num: true }; })),
+          rows: ents.map(function (e) { return { cells: [entLabel(e), t.overall[e] == null ? "—" : t.overall[e] + "%"].concat(catCols.map(function (c) { var r = trkRow(t, e, c.ci); return r && r.pct != null ? r.pct + "%" : "—"; })) }; }) };
+      } });
+    var parts = [
+      h("div", { class: "tiles" },
+        tile("Average compliance", st.avg == null ? "—" : String(st.avg), st.avg == null ? null : "%", st.reporting + " of " + ents.length + " entities reporting"),
+        tile("Entities at 90%+", fmt(st.good), null, "Compliant tier"),
+        tile("Non-compliant items", fmt(st.nc), null, "Open NC checks, latest status"),
+        tile("Checks tracked", fmt(st.items), null, t.categories.length + " categories")),
+      ready ? null : awaiting(t, meta),
+      matrix
+    ];
+    if (ready && t.periods && t.trend.length) {
+      var months = t.periods.filter(function (p) { return t.trend.some(function (r) { return r.p === p; }); });
+      if (meta.id === "payroll_processing") months = months.slice().reverse();     // her list is latest-first
+      parts.push(card({ title: "Month by month", hint: "Entity compliance in each month", body: h("div", { class: "tscroll" }, h("table", { class: "t heat tmatrix" },
+        h("thead", null, h("tr", null, h("th", { text: "Entity" }), months.map(function (m) { return h("th", { class: "num", text: m }); }))),
+        h("tbody", null, ents.map(function (e) { return h("tr", null, h("td", { class: "ent", text: entLabel(e) }), months.map(function (m) { var r = t.trend.filter(function (x) { return x.e === e && x.p === m; })[0]; return tierCell(r ? r.pct : null, entLabel(e) + " · " + m); })); })))) }));
+    }
+    parts.push(card({ title: "What is checked", hint: st.items + " checks in " + t.categories.length + " categories — from Ritu's tracker", body: checklist(t) }));
+    parts.push(note([h("b", { text: "Published: " }), "percentages and counts per entity and category only. Which specific checks are non-compliant stays in Ritu's tracker — the site is public."]));
+    return parts;
+  }
+
+  view({
+    id: "compliance/overview", sec: "compliance", title: "Compliance overview",
+    lede: "Labour Codes, POSH and payroll compliance for all seven entities on one page.",
+    uses: { period: false, c: true, e: false, g: false },
+    render: function () {
+      var entSet = [];
+      TRK_ORDER.forEach(function (m) { var t = TRK[m.id]; if (t) trkEntities(t).forEach(function (e) { if (entSet.indexOf(e) < 0) entSet.push(e); }); });
+      var order = ["PSPL"].concat(ALL_C); entSet.sort(function (a, b) { return order.indexOf(a) - order.indexOf(b); });
+      var tiles = TRK_ORDER.map(function (m) {
+        var t = TRK[m.id]; if (!t) return null; var s = trkStats(t, trkEntities(t));
+        return tile(m.short, s.avg == null ? "—" : String(s.avg), s.avg == null ? null : "%", t.status === "ready" ? fmt(s.nc) + " non-compliant · " + s.reporting + " entities" : "Awaiting backup", { go: m.route });
+      });
+      var head = h("tr", null, h("th", { text: "Entity" }), TRK_ORDER.map(function (m) { return h("th", { class: "num" }, h("a", { href: "#/" + m.route, text: m.short })); }));
+      var rows = entSet.map(function (e) {
+        return h("tr", null, h("td", { class: "ent" }, h("i", { class: "sw", style: { background: CAMPUS_COLOR[e] || "var(--s7)" } }), entLabel(e)),
+          TRK_ORDER.map(function (m) { var t = TRK[m.id]; if (!t || (t.entities || []).indexOf(e) < 0) return h("td", { class: "cell tier-none na-cell", text: "n/a" }); return tierCell(t.overall[e] == null ? null : t.overall[e], entLabel(e) + " · " + m.short, [{ value: fmt(t.flagged[e] || 0), label: "non-compliant items" }]); }));
+      });
+      // weakest entity × category combinations across all trackers
+      var weak = [];
+      TRK_ORDER.forEach(function (m) { var t = TRK[m.id]; if (!t) return; t.rows.forEach(function (r) { if (r.pct != null && r.pct < 70 && trkEntities(t).indexOf(r.e) >= 0) weak.push({ m: m, t: t, r: r }); }); });
+      weak.sort(function (a, b) { return a.r.pct - b.r.pct; });
+      var pending = TRK_ORDER.filter(function (m) { return TRK[m.id] && TRK[m.id].status !== "ready"; });
+      return [
+        h("div", { class: "tiles" }, tiles),
+        pending.length ? note([h("b", { text: "Awaiting backups: " }), pending.map(function (m) { return m.short; }).join(", ") + ". Open each page for the two-minute steps — the checklists are already loaded."]) : null,
+        h("div", { class: "grid g-21" },
+          card({ title: "Entity scorecard", hint: "Overall compliance per tracker · click a column to open it", body: [h("div", { class: "tscroll" }, h("table", { class: "t heat tmatrix" }, h("thead", null, head), h("tbody", null, rows))), tierLegend()] }),
+          card({ title: "Needs attention", hint: "Categories below 70%, weakest first", body: weak.length ? h("div", { class: "attn" }, weak.slice(0, 8).map(function (w) {
+            return h("div", { class: "attn-row" }, h("span", { class: "ico critical", text: "!" }), h("div", null, h("div", { class: "t", text: entLabel(w.r.e) + " · " + w.t.categories[w.r.ci].title }), h("div", { class: "d", text: w.m.short + " — " + w.r.pct + "% (" + w.r.no + " non-compliant)" })), h("a", { href: "#/" + w.m.route, text: "Open →" }));
+          })) : empty(pending.length === TRK_ORDER.length ? "No tracker data yet" : "Nothing below 70%", pending.length === TRK_ORDER.length ? "Appears once Ritu's backups are loaded." : "") }))
+      ];
+    }
+  });
+  TRK_ORDER.forEach(function (m) {
+    var t = TRK[m.id];
+    view({
+      id: m.route, sec: "compliance", title: t ? t.title : m.short, tag: t && t.status !== "ready" ? "pending" : null,
+      lede: {
+        labour: "Code on Wages, Industrial Relations, Social Security and OSH — plus licences, policies, committees, registers and displays.",
+        posh: "Policy, Internal Committee, training, complaints, inquiry, records, student safety and audit — reviewed monthly.",
+        payroll_processing: "The recurring monthly payroll tasks for PSPL, FSK, FSM, FALH and FWGS — done vs pending.",
+        payroll_kpi: "Payroll by the 28th, queries in 5 days, on-time statutory filing and F&F within 30 days."
+      }[m.id],
+      uses: { period: false, c: true, e: false, g: false },
+      render: function () { return trackerPage(m); }
+    });
+  });
 
   /* ----- 03 Compliance · Statutory data (Nucleus) ----- */
   view({
@@ -968,10 +1086,6 @@
     }
   });
 
-  view(soonView("compliance/checklists", "compliance", "Compliance checklists", "✓", "Monthly statutory checklist per entity — filed, paid and evidenced.",
-    ["PF, ESI, PT and TDS filing & payment by the due date", "Payroll processed by the 28th", "Full & final settlement within 30 days of exit", "Registers and audit evidence per entity (incl. PSPL)"],
-    "Ritu to share the checklist items and owners; each month's status can then be ticked here."));
-
   /* ----- 04 Policies ----- */
   var POLICIES = [
     { k: "H", t: "HR Handbook", d: "The complete employee handbook", docs: ["Employee Handbook 2026–27"] },
@@ -1044,7 +1158,7 @@
       // wrapper animates open/close height (grid-template-rows 0fr -> 1fr)
       li.appendChild(h("div", { class: "tree-kids-wrap" }, h("ul", { class: "tree-kids" }, sectionViews(s.id).map(function (v) {
         return h("li", null, h("a", { href: "#/" + v.id, tabindex: open ? null : "-1", "aria-current": current && current.id === v.id ? "page" : null },
-          v.title, v.soon ? h("span", { class: "tag", text: "Planned" }) : v.tag && !(RAW.tracker && RAW.tracker.status === "ready") ? h("span", { class: "tag looker", text: "Pending" }) : null));
+          v.title, v.soon ? h("span", { class: "tag", text: "Planned" }) : v.tag === "pending" ? h("span", { class: "tag looker", text: "Pending" }) : null));
       }))));
       tree.appendChild(li);
     });
@@ -1058,8 +1172,10 @@
     foot.appendChild(h("div", { class: "rail-label", style: { padding: 0 }, text: "Data sources" }));
     if (v1) foot.appendChild(h("div", { class: "src-row" }, h("i", { class: "dot" }), h("div", null, h("b", { text: "Nucleus v1 · " + v1.campus }), h("div", { text: "As of " + dLabel(v1.as_of) }))));
     if (edu.length) foot.appendChild(h("div", { class: "src-row" }, h("i", { class: "dot" }), h("div", null, h("b", { text: "Nucleus EDU · " + edu.map(function (s) { return s.campus; }).join(", ") }), h("div", { text: "As of " + dLabel(edu[0].as_of) }))));
-    var L = RAW.tracker;
-    foot.appendChild(h("div", { class: "src-row" }, h("i", { class: "dot " + (L && L.status === "ready" ? "manual" : "sample") }), h("div", null, h("b", { text: "Compliance tracker" }), h("div", { text: L && L.status === "ready" ? "As of " + L.as_of : "Figures pending" }))));
+    var trk = RAW.compliance && RAW.compliance.trackers || {}, ready = Object.keys(trk).filter(function (k) { return trk[k].status === "ready"; });
+    var stamp = ready.map(function (k) { return trk[k].as_of; }).filter(Boolean).sort().pop();
+    foot.appendChild(h("div", { class: "src-row" }, h("i", { class: "dot " + (ready.length ? "manual" : "sample") }), h("div", null, h("b", { text: "Ritu's compliance trackers" }),
+      h("div", { text: ready.length ? ready.length + " of " + Object.keys(trk).length + " loaded" + (stamp ? " · " + dLabel(stamp) : "") : "Backups pending" }))));
     foot.appendChild(h("div", { text: "Counts only — no names, IDs or personal details are published." }));
   }
   function dLabel(iso) { if (!iso) return "—"; var d = new Date(iso + "T00:00:00"); return d.getDate() + " " + MON[d.getMonth()] + " " + d.getFullYear(); }
@@ -1286,7 +1402,7 @@
 
   function route() {
     var hash = location.hash.replace(/^#\/?/, "");
-    var legacy = { overview: "overview/snapshot", attrition: "exit/attrition", recruitment: "hiring/recruitment", newjoinees: "hiring/joinees", tickets: "compliance/tickets", compliance: "compliance/campus" };
+    var legacy = { overview: "overview/snapshot", attrition: "exit/attrition", recruitment: "hiring/recruitment", newjoinees: "hiring/joinees", tickets: "compliance/tickets", compliance: "compliance/overview" };
     if (legacy[hash]) hash = legacy[hash];
     var v = viewById(hash) || (function () { var s = sectionViews(hash); return s.length ? s[0] : null; })();
     if (!v || !allowed(v)) v = S.role === "employee" ? viewById("policies/library") : viewById("overview/snapshot");

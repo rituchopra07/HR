@@ -37,6 +37,8 @@ except ImportError:  # pragma: no cover
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG_PATH = ROOT / "tools" / "sources.json"
 MANUAL_DIR = ROOT / "tools" / "manual"
+TRACKER_DEFS = MANUAL_DIR / "trackers" / "definitions.json"
+TRACKER_BACKUPS = ROOT / "tools" / "private" / "trackers"   # git-ignored: raw JSON backups from the tracker tabs
 OUT_PATH = ROOT / "design" / "data" / "hr-data.js"
 
 # Academic year runs June–May (Nucleus AcademicYear table; same basis as the Looker attrition report).
@@ -488,6 +490,84 @@ def build(people, as_of_by_campus, out):
     out["fnf"] = fnf.out()
 
 
+# ----------------------------------------------------------------------------- compliance trackers
+
+def _latest(value, periods, rule):
+    """Status of one checklist item: a plain string, or {period: status} -> latest non-blank period."""
+    if not isinstance(value, dict):
+        return value or ""
+    order = periods if rule == "first" else list(reversed(periods))   # "first": list is already latest-first
+    for p in order:
+        if value.get(p):
+            return value[p]
+    return ""
+
+
+def _cat_pct(statuses, st):
+    yes = sum(1 for s in statuses if s == st["yes"])
+    no = sum(1 for s in statuses if s == st["no"])
+    na = sum(1 for s in statuses if s == st["na"])
+    return {"yes": yes, "no": no, "na": na, "blank": len(statuses) - yes - no - na,
+            "pct": round(yes / (yes + no) * 100) if yes + no else None}
+
+
+def build_trackers(notes, publish_items=False):
+    """Aggregate Ritu's tracker backups the way her dashboard does:
+    category % = C / (C + NC) on each item's latest status; entity % = mean of category %s.
+    Published: percentages and counts only — no remarks, no 'updated by', item statuses only if publish_items."""
+    if not TRACKER_DEFS.exists():
+        return None
+    defs = json.loads(TRACKER_DEFS.read_text(encoding="utf-8"))
+    keymap = defs.get("entity_keys", {})               # portal code -> key used inside the backup
+    out = {"source": defs.get("source"), "trackers": {}}
+    for tid, t in defs["trackers"].items():
+        cats = t["categories"]
+        sizes = [len(c["items"]) if "items" in c else c["item_count"] for c in cats]
+        pub = {"title": t["title"], "entities": t["entities"], "periods": t.get("periods"),
+               "categories": [{"title": c["title"], "n": n, **({"items": c["items"]} if "items" in c else {})}
+                              for c, n in zip(cats, sizes)],
+               "status": "pending", "as_of": None, "rows": [], "overall": {}, "flagged": {}, "trend": []}
+        files = sorted(TRACKER_BACKUPS.glob(t["backup_prefix"] + "*.json")) if TRACKER_BACKUPS.exists() else []
+        if files:
+            raw = json.loads(files[-1].read_text(encoding="utf-8"))
+            ents = raw.get("entities", {})
+            stamps = []
+            for e in t["entities"]:
+                data = ents.get(keymap.get(e, e)) or ents.get(e)
+                if not data:
+                    continue
+                items = data.get("items", {})
+                if (data.get("meta") or {}).get("updatedAt"):
+                    stamps.append(data["meta"]["updatedAt"][:10])
+                cat_pcts = []
+                for ci, n in enumerate(sizes):
+                    sts = [_latest(items.get(f"{ci}-{ii}"), t.get("periods") or [], t.get("latest", "last")) for ii in range(n)]
+                    s = _cat_pct(sts, t["statuses"])
+                    pub["rows"].append({"e": e, "ci": ci, **s})
+                    if s["pct"] is not None:
+                        cat_pcts.append(s["pct"])
+                    if publish_items:
+                        pub.setdefault("items", []).append({"e": e, "ci": ci, "s": sts})
+                pub["overall"][e] = round(sum(cat_pcts) / len(cat_pcts)) if cat_pcts else None
+                pub["flagged"][e] = sum(r["no"] for r in pub["rows"] if r["e"] == e)
+                for p in t.get("periods") or []:          # month-by-month entity % (monthly trackers)
+                    per = []
+                    for ci, n in enumerate(sizes):
+                        sts = [(items.get(f"{ci}-{ii}") or {}).get(p, "") if isinstance(items.get(f"{ci}-{ii}"), dict) else "" for ii in range(n)]
+                        pc = _cat_pct(sts, t["statuses"])["pct"]
+                        if pc is not None:
+                            per.append(pc)
+                    if per:
+                        pub["trend"].append({"e": e, "p": p, "pct": round(sum(per) / len(per))})
+            pub["status"] = "ready" if pub["rows"] else "pending"
+            pub["as_of"] = max(stamps) if stamps else (raw.get("exportedAt") or "")[:10] or None
+            print(f"  tracker {tid}: {files[-1].name} ({len(pub['overall'])} entities)")
+        else:
+            notes.append(f"{t['title']}: no backup yet — save the tab's JSON backup into tools/private/trackers/.")
+        out["trackers"][tid] = pub
+    return out
+
+
 # ----------------------------------------------------------------------------- main
 
 def main():
@@ -566,7 +646,7 @@ def main():
         "campuses": CAMPUSES, "employers": EMPLOYERS, "groups": GROUPS,
         **out,
         "reference": manual.get("reference", {}).get("headcount_reference"),
-        "tracker": manual.get("compliance_tracker"),
+        "compliance": build_trackers(facts["notes"], bool(cfg.get("publish_tracker_items"))),
     }
 
     OUT_PATH.parent.mkdir(parents=True, exist_ok=True)

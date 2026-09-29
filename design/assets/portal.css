@@ -450,6 +450,31 @@ table.heat th:first-child{ text-align:left; }
 .scale .ramp i{ width:22px; height:9px; }
 .scale .ramp i:first-child{ border-radius:3px 0 0 3px; } .scale .ramp i:last-child{ border-radius:0 3px 3px 0; }
 
+/* Compliance tier matrix (Ritu's bands: 90%+ / 70–89% / <70%) — status colour always paired with the % label */
+table.tmatrix{ border-collapse:separate; border-spacing:2px; }
+table.tmatrix td, table.tmatrix th{ border-bottom:none; }
+table.tmatrix thead th{ border-bottom:1.5px solid var(--ink); padding-bottom:8px; vertical-align:bottom; }
+table.tmatrix th a{ color:inherit; text-decoration:none; } table.tmatrix th a:hover{ color:var(--accent-ink); }
+table.tmatrix th.rot{ height:150px; padding:0 0 8px; text-align:left; min-width:44px; text-transform:none; letter-spacing:0; font-size:11px; font-weight:650; color:var(--ink-2); }
+/* vertical labels wrap onto a second line instead of clipping long category names */
+table.tmatrix th.rot span{ display:block; writing-mode:vertical-rl; transform:rotate(180deg); white-space:normal; max-height:140px; line-height:1.15; margin:0 auto; }
+table.tmatrix td.ent{ white-space:nowrap; font-weight:600; font-size:12.5px; padding:6px 12px 6px 4px; display:flex; align-items:center; gap:8px; }
+table.tmatrix td.ent .sw{ width:9px; height:9px; border-radius:3px; flex:none; }
+table.tmatrix td.tcell{ text-align:center; border-radius:7px; padding:8px 3px; min-width:42px; font-size:12px; position:relative; border:0 !important; }
+td.tcell b{ font-weight:700; font-variant-numeric:tabular-nums; }
+td.tcell .tc-empty{ color:var(--ink-3); }
+td.tcell .tc-flag{ position:absolute; top:3px; right:4px; width:12px; height:12px; border-radius:50%; font-size:8.5px; font-weight:800; line-height:12px; color:#fff; background:var(--critical); }
+.tier-good{ background:color-mix(in srgb, var(--good) 20%, var(--surface)); color:var(--ink); }
+.tier-warning{ background:color-mix(in srgb, var(--warning) 26%, var(--surface)); color:var(--ink); }
+.tier-critical{ background:color-mix(in srgb, var(--critical) 20%, var(--surface)); color:var(--ink); }
+.tier-none{ background:var(--surface-2); color:var(--ink-3); }
+td.na-cell{ font-size:11px; font-style:italic; }
+.tier-legend .sw{ border-radius:3px; }
+.sw.tier-good{ background:color-mix(in srgb, var(--good) 45%, var(--surface)); } .sw.tier-warning{ background:color-mix(in srgb, var(--warning) 55%, var(--surface)); }
+.sw.tier-critical{ background:color-mix(in srgb, var(--critical) 45%, var(--surface)); } .sw.tier-none{ background:var(--surface-2); border:1px solid var(--line); }
+.awaiting .steps{ margin:12px 0 0; padding-left:20px; display:flex; flex-direction:column; gap:6px; font-size:12.5px; color:var(--ink-2); }
+.awaiting code, .note code{ font-family:var(--f-mono); font-size:11.5px; background:var(--surface-2); border:1px solid var(--line); padding:1px 6px; border-radius:5px; color:var(--ink); }
+
 /* Status pills */
 .pill{ display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:700; padding:3px 9px 3px 7px; border-radius:99px; background:var(--surface-2); color:var(--ink-2); white-space:nowrap; }
 .pill::before{ content:""; width:7px; height:7px; border-radius:50%; background:currentColor; }

@@ -1,0 +1,596 @@
+{
+  "_comment": "Checklist structure of Ritu Chopra's HR compliance trackers (claude.ai artifact, tabs 6-8). Status values come from each tab's JSON backup. Regenerate from the artifact when the checklists change.",
+  "source": "HR compliance trackers — POSH, Labour Codes 2020, Payroll (Ritu Chopra)",
+  "entity_keys": {
+    "FPV": "FP_Vesu",
+    "FPA": "FP_Adajan"
+  },
+  "trackers": {
+    "labour": {
+      "title": "Labour Codes 2020",
+      "backup_prefix": "compliance-backup-",
+      "entities": [
+        "PSPL",
+        "FSK",
+        "FSM",
+        "FALH",
+        "FWGS",
+        "FPV",
+        "FPA"
+      ],
+      "periods": null,
+      "statuses": {
+        "yes": "Compliant",
+        "no": "Non-Compliant",
+        "na": "NA"
+      },
+      "categories": [
+        {
+          "title": "Code on Wages",
+          "items": [
+            "Wage definition audit",
+            "Payroll restructuring",
+            "Minimum/floor wage compliance",
+            "Timely wage payment",
+            "Payment mode",
+            "Deduction cap",
+            "Full & final settlement",
+            "Wage slips",
+            "Equal remuneration",
+            "Annual statutory bonus",
+            "Bonus disqualification checks",
+            "Overtime pay",
+            "Statutory notice display",
+            "Registers & records",
+            "Non-waiver clause compliance",
+            "Claims & limitation tracking",
+            "Appointment letters"
+          ]
+        },
+        {
+          "title": "Industrial Relations",
+          "items": [
+            "Standing orders threshold",
+            "Draft standing orders",
+            "Consultation before certification",
+            "Notice of change",
+            "Negotiating union/council recognition",
+            "Lay-off compensation (50-299 workers)",
+            "Retrenchment/closure permission (300+)",
+            "Retrenchment notice & compensation",
+            "Closure notice",
+            "Reskilling fund contribution",
+            "Strike/lockout notice",
+            "Fixed-term employment (FTE) parity",
+            "Grievance Redressal Committee",
+            "Works Committee",
+            "Trade union registration support",
+            "Dispute resolution readiness",
+            "Supervisory wage threshold check",
+            "Illegal strike/fund misuse prohibition",
+            "Record maintenance"
+          ]
+        },
+        {
+          "title": "Social Security",
+          "items": [
+            "EPF applicability & contribution",
+            "ESI applicability",
+            "Gratuity - standard employees",
+            "Gratuity - fixed-term employees",
+            "Gratuity default penalty awareness",
+            "Maternity benefit",
+            "Creche facility",
+            "Employees' compensation",
+            "Unorganized worker registration",
+            "Gig & platform worker recognition",
+            "Aggregator contribution (if applicable)",
+            "Aggregator registration & returns",
+            "Building & construction worker cess",
+            "Unified registration",
+            "Single electronic return",
+            "FTE/contract worker parity",
+            "Career centre coordination",
+            "Inspector-cum-Facilitator readiness"
+          ]
+        },
+        {
+          "title": "OSH Code",
+          "items": [
+            "Establishment registration",
+            "Factory threshold check",
+            "Contract labour licensing",
+            "Contractor license application",
+            "Principal employer liability",
+            "Appointment letters",
+            "Working hours",
+            "Overtime",
+            "Weekly holiday & leave accrual",
+            "Annual health check-ups",
+            "Canteen facility",
+            "Creche facility",
+            "First aid",
+            "Drinking water/washrooms/toilets",
+            "Safety/welfare officer appointment",
+            "Safety Committee",
+            "Women's night-shift employment",
+            "Common facilities, shared premises",
+            "Inter-state migrant worker register",
+            "Migrant worker helpline",
+            "Accident reporting",
+            "Occupational disease reporting",
+            "Annual return",
+            "Employee master register",
+            "Hazardous process disclosure"
+          ]
+        },
+        {
+          "title": "Cross-Cutting",
+          "items": [
+            "State rules tracking",
+            "Worker vs. employee reclassification",
+            "Policy & handbook overhaul",
+            "HRMS/payroll reconfiguration",
+            "Contract & offer letter templates",
+            "Vendor/contractor compliance audit",
+            "Digital forms & portal readiness",
+            "Unified compliance calendar",
+            "Penalty exposure review",
+            "Employee communication",
+            "Training for managers",
+            "Internal audit/mock inspection"
+          ]
+        },
+        {
+          "title": "A. License / Registration",
+          "items": [
+            "LIN (Labour Identification Number)",
+            "ESI Registration",
+            "PF Code",
+            "PT (Professional Tax) Registration",
+            "LWF (Labour Welfare Fund) Registration",
+            "Shop & Establishment / Gumastadhara Registration",
+            "Factory Licence No.",
+            "Food Licence (FSSAI)",
+            "Employment Exchange Return (ER) Registration",
+            "Principal Employer Registration Certificate (Form II) — Contract Labour",
+            "Contractor's Contract Labour Licence (Form VI)",
+            "Fire NOC",
+            "Lift Licence",
+            "Pollution Control Board Consent to Establish / Operate (if applicable)",
+            "PTEC / PTRC Certificate"
+          ]
+        },
+        {
+          "title": "B. Policies / Guidelines",
+          "items": [
+            "Leaves and Credit Policy",
+            "Exit Policy",
+            "Performance Improvement Plan (PIP)",
+            "Performance Management System (PMS)",
+            "DPDP — Digital Personal Data Protection Policy",
+            "Compensation and Overtime Policy",
+            "POSH Policy",
+            "Grievance Redressal Policy",
+            "HSE Policy / Manual (mandatory if 50 or more employees)",
+            "Group Personal Accident Insurance Policy",
+            "Driver and Conductor Insurance Policy",
+            "Workmen Compensation (Insurance) Policy",
+            "Incentive / Deduction Policy",
+            "Maternity Benefit Policy",
+            "Apprentice Policy / Apprentice Registration"
+          ]
+        },
+        {
+          "title": "C. Committees",
+          "items": [
+            "Grievance Redressal Committee (mandatory if 20 or more employees)",
+            "Works Committee (mandatory if 100 or more employees)",
+            "Safety Committee (mandatory if 250 or more employees)",
+            "Canteen Committee (mandatory if 250 or more employees)",
+            "Internal Complaints Committee (ICC) — POSH",
+            "NGO / External Member appointment on ICC",
+            "Election / Constitution of Committee members and validity"
+          ]
+        },
+        {
+          "title": "D. KYC & Employee Master Data",
+          "items": [
+            "Aadhar",
+            "PAN",
+            "Bank",
+            "Mobile",
+            "E-nomination",
+            "FAT (Family/UAN Aadhar linking)",
+            "ESI IP Portal Registration / KYC",
+            "E-Pehchan Card",
+            "Update Family Details",
+            "Aadhar Linking",
+            "Bank KYC / UAN Seeding",
+            "Code Allotment Letter (PF & ESI) — copy",
+            "DSC (Digital Signature Certificate)",
+            "Specimen Signature Card",
+            "VPF Declaration Form"
+          ]
+        },
+        {
+          "title": "E. Factory, Health & Safety",
+          "items": [
+            "School Plan No. and approved date",
+            "Building Stability Certificate",
+            "Updation of workers' strength records with factory authorities",
+            "Crèche Room (mandatory if 30 or more women / as applicable)",
+            "Canteen (mandatory if 250 or more employees)",
+            "Lunch Room (mandatory if 150 or more employees)",
+            "Ambulance Room / OHC (mandatory if 500 or more employees)",
+            "First Aid Box — location-wise (1 per 150 employees) with inspection list",
+            "Lift Inspection Report (Form-09 with Annexure XX)",
+            "Lifting Machine / Chain / Rope / Hoist Inspection (Form-10)",
+            "Competency Report of Pressure Vessel (Form-11)",
+            "Pressure Vessel and Lift Testing Reports",
+            "Electrical Inspection (Form Y)",
+            "DG Set Permission Letter",
+            "DG Set Log Book",
+            "Ground Water Extraction Permission (if any)",
+            "Waste Disposal Agency agreement",
+            "Hazardous Waste Disposal Report (Form 4)",
+            "Bio-Medical Waste Disposal Report (Form 4)",
+            "E-Waste Disposal Report (Form 3)",
+            "Environment Statement Report (Form 5)",
+            "Stack / Noise / Illumination / Air Ambience / Soil Analysis monitoring reports",
+            "Pollution Control Board Annual Report",
+            "Police Verification (security guard with gun)",
+            "Security Gun Licence (if any)",
+            "Inspection Authority: Form 9",
+            "Inspection Authority: Form 10",
+            "Inspection Authority: Form 11",
+            "Certificate of Fitness — Non-HP (Form 27-A) / HP (Form 33)",
+            "Health Register — Dangerous Operations (Form 20) / HP (Form 32)",
+            "Medical tests for employees aged 45 and above",
+            "Medical Officer appointment (mandatory up to 500 employees) / Additional Nursing Staff",
+            "Fire NOC",
+            "Fire Evacuation Plan",
+            "Emergency Exit Signage",
+            "Fire Drill / Mock Drill / Spill Drill records",
+            "PPE Register and PPE Training records",
+            "Safety Training records for all workers",
+            "Accident Register (Form 22 / Form 29)",
+            "Food Licence for Canteen (FSSAI)",
+            "Food Test report (periodic)",
+            "Water Test report (periodic)"
+          ]
+        },
+        {
+          "title": "F. Contractor Records",
+          "items": [
+            "Contractor Agreement / Legal Agreement",
+            "PF Code copy (Contractor)",
+            "ESI Code copy (Contractor)",
+            "Police Verification of Guards",
+            "Attendance / Wage Register",
+            "Payment Transfer Details",
+            "PF ECR (Contractor)",
+            "PF and ESI Payment Receipts (Contractor)",
+            "I-Cards (Contractor employees)",
+            "PT Payments (Contractor)",
+            "Register of Contractors (Form XII)",
+            "Register of Persons Employed (Form XIII)",
+            "Employment Card (Form XIV)",
+            "Muster Roll (Form XVI) / Wages Register (Form XVII)",
+            "Register of Deductions for Damage or Loss (Form XX)",
+            "Register of Fines (Form XXI)",
+            "Register of Advances (Form XXII)",
+            "Register of Overtime (Form XXIII)",
+            "Reconciliation: Principal Employer Form II strength vs. contractor engaged strength",
+            "Reconciliation: Contractor licence strength vs. engaged strength",
+            "WC Policy for non-ESI-covered contract workers"
+          ]
+        },
+        {
+          "title": "G. Records & Registers",
+          "items": [
+            "Employee Register",
+            "Attendance Register",
+            "Wage Register",
+            "Wage Slips",
+            "Medical Health Register",
+            "I-Card to Employees / I-Card Register",
+            "Women Register",
+            "Leave Card and Leave Register",
+            "Adult Workers Register",
+            "Compensatory Off Register",
+            "Overtime Register",
+            "Muster Register",
+            "Shift Permission Register",
+            "Joining List / File",
+            "Resignation List / Full & Final Settlement File",
+            "Leave Encashment & Payment Record",
+            "Annual Return (Factory)"
+          ]
+        },
+        {
+          "title": "H. Notice Board / Statutory Displays",
+          "items": [
+            "Safety Committee",
+            "POSH / ICC",
+            "Canteen Committee",
+            "Works Committee",
+            "Grievance Redressal Committee",
+            "Transgender Employee Protection notice",
+            "Code on Wages abstract",
+            "Rate of Minimum Wage",
+            "Name and Address of the Inspector-cum-Facilitator",
+            "Notice: date of payment before 7th of the month",
+            "Maternity Benefit abstract",
+            "POSH abstract",
+            "Shift hours notice",
+            "List of Holidays",
+            "List of Emergency Numbers",
+            "Model Standing Order",
+            "PF Form 5A details",
+            "Monthly Challan / Payment Receipt — PF, ESIC, PT, LWF",
+            "Bonus — Form A, Form B (calculation), Form C (Bonus Payment Register), Form D (Annual Return)",
+            "Professional Tax — PTEC and PTRC payment receipts",
+            "ER-I Quarterly Return (Employment Exchange)",
+            "BOCW Cess Payment (Building and Other Construction Workers, if applicable)",
+            "ICC / POSH Annual Return",
+            "Provisions for Handicapped Employees (PT exemption, certificate on file)",
+            "In and Out Time Records",
+            "Crèche Room upkeep",
+            "POSH awareness training and NGO tie-up",
+            "Salary disbursed before 7th of following month",
+            "Apprentice registration and current apprentice count",
+            "Audit Reports — FY 2025-26",
+            "Profit & Loss Statement",
+            "194C TDS Statement",
+            "Fixed Assets Register"
+          ]
+        }
+      ]
+    },
+    "posh": {
+      "title": "POSH compliance",
+      "backup_prefix": "posh-compliance-backup-",
+      "entities": [
+        "PSPL",
+        "FSK",
+        "FSM",
+        "FALH",
+        "FWGS",
+        "FPV",
+        "FPA"
+      ],
+      "periods": [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec"
+      ],
+      "latest": "last",
+      "statuses": {
+        "yes": "C",
+        "no": "NC",
+        "na": "NA"
+      },
+      "categories": [
+        {
+          "title": "Policy & Awareness",
+          "items": [
+            "POSH policy documented and approved",
+            "Policy displayed prominently on campus and website",
+            "All staff informed about POSH policy",
+            "Policy includes definition of sexual harassment and redressal mechanism",
+            "Regular awareness sessions conducted for staff"
+          ]
+        },
+        {
+          "title": "Internal Committee (IC) Formation",
+          "items": [
+            "IC constituted as per POSH Act requirements",
+            "Presiding Officer is a senior female employee",
+            "At least 50% women members in IC",
+            "External member appointed with relevant experience",
+            "IC details displayed on notice boards"
+          ]
+        },
+        {
+          "title": "Training & Capacity Building",
+          "items": [
+            "IC members trained on POSH procedures",
+            "Regular refresher training conducted",
+            "New employees oriented on POSH during induction",
+            "Special sessions for leadership/management",
+            "Documentation of all training sessions maintained"
+          ]
+        },
+        {
+          "title": "Complaint Mechanism",
+          "items": [
+            "Clear process for filing complaints defined",
+            "Multiple reporting channels available (email, written, verbal)",
+            "Confidentiality maintained in all cases",
+            "Support provided to complainant",
+            "Timelines for complaint resolution followed"
+          ]
+        },
+        {
+          "title": "Inquiry Process",
+          "items": [
+            "Fair and unbiased inquiry conducted",
+            "Both parties given opportunity to be heard",
+            "Proper documentation of proceedings maintained",
+            "Recommendations documented and shared with management",
+            "Action taken report maintained"
+          ]
+        },
+        {
+          "title": "Record Keeping & Documentation",
+          "items": [
+            "Register of complaints maintained",
+            "Annual report prepared as per law",
+            "Records stored securely with restricted access",
+            "Case closure documentation maintained",
+            "Compliance records available for audit"
+          ]
+        },
+        {
+          "title": "Student Safety Alignment",
+          "items": [
+            "Child protection policy aligned with POSH principles",
+            "Awareness sessions for students on safe/unsafe behavior",
+            "Reporting mechanisms adapted for students",
+            "Counsellor support available",
+            "Coordination with child protection committees"
+          ]
+        },
+        {
+          "title": "Audit & Compliance",
+          "items": [
+            "Periodic POSH audits conducted",
+            "Gaps identified and corrective actions taken",
+            "Annual POSH report submitted (if applicable)",
+            "Compliance with local/state regulations ensured"
+          ]
+        }
+      ]
+    },
+    "payroll_processing": {
+      "title": "Payroll processing checklist",
+      "backup_prefix": "payroll-processing-backup-",
+      "entities": [
+        "PSPL",
+        "FSK",
+        "FSM",
+        "FALH",
+        "FWGS"
+      ],
+      "periods": [
+        "September",
+        "August",
+        "July",
+        "June"
+      ],
+      "latest": "first",
+      "statuses": {
+        "yes": "Done",
+        "no": "Pending",
+        "na": "NA"
+      },
+      "categories": [
+        {
+          "title": "1. Attendance",
+          "item_count": 6
+        },
+        {
+          "title": "2. Employee Details Checklist",
+          "item_count": 8
+        },
+        {
+          "title": "3.1 Maternity Leave (ML) Cases",
+          "item_count": 4
+        },
+        {
+          "title": "3.3 New Joiners",
+          "item_count": 4
+        },
+        {
+          "title": "3.4 Resignation",
+          "item_count": 1
+        },
+        {
+          "title": "3.5 Interns (if any)",
+          "item_count": 1
+        },
+        {
+          "title": "4. Teacher Training Incentive (applies to FS Report and PSLLP Report)",
+          "item_count": 5
+        },
+        {
+          "title": "5. FS Report Checklist",
+          "item_count": 5
+        },
+        {
+          "title": "6. PSLLP Report Checklist",
+          "item_count": 6
+        },
+        {
+          "title": "7. GPA and PF Checklist",
+          "item_count": 4
+        },
+        {
+          "title": "8. Referral Data Checkpoints",
+          "item_count": 5
+        },
+        {
+          "title": "9. Compensation Claim Checklist",
+          "item_count": 6
+        },
+        {
+          "title": "10. Final Step — Visiting Faculty (VF) Salary Checklist",
+          "item_count": 3
+        },
+        {
+          "title": "Check the following in the Visiting Faculty Invoice Format 2024-25:",
+          "item_count": 10
+        }
+      ]
+    },
+    "payroll_kpi": {
+      "title": "Payroll KPIs",
+      "backup_prefix": "payroll-kpi-backup-",
+      "entities": [
+        "PSPL",
+        "FSK",
+        "FSM",
+        "FPV",
+        "FPA",
+        "FALH",
+        "FWGS"
+      ],
+      "periods": [
+        "June",
+        "July",
+        "August",
+        "Sept.",
+        "Oct.",
+        "Nov.",
+        "Dec.",
+        "Jan.",
+        "Feb.",
+        "March",
+        "April",
+        "May"
+      ],
+      "latest": "last",
+      "statuses": {
+        "yes": "C",
+        "no": "NC",
+        "na": "NA"
+      },
+      "categories": [
+        {
+          "title": "Payroll",
+          "items": [
+            "Ensure 100% payroll is processed by the 28th of each month, in line with defined payroll cycles, as per the checklist (FS: 1st of every month; FSNC: 5th of every month).",
+            "Address and resolve 100% of payroll-related queries within 5 working days of receipt."
+          ]
+        },
+        {
+          "title": "Legal and Compliance",
+          "items": [
+            "Achieve 100% on-time filing and payment of all statutory obligations (PF, ESI, PT, TDS, etc.) with zero delays each month.",
+            "Ensure 100% accuracy in Full & Final settlements, processed within 30 days of an employee’s exit, with zero compliance lapses."
+          ]
+        }
+      ]
+    }
+  }
+}
