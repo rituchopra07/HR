@@ -4,515 +4,54 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Fountainhead HR Portal</title>
-<meta name="description" content="Layout shell for the Fountainhead Schools HR portal — sections, entity filter and role-based views.">
+<meta name="description" content="Fountainhead Group HR portal — headcount, hiring, attrition, compliance and policies across all campuses.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
-<style>
-  :root{
-    --ink:#16233A; --ink-2:#51617A;
-    --paper:#EDF1EF; --surface:#FFFFFF; --surface-2:#F4F7F5;
-    --line:#DAE1DE; --accent:#B8862E; --accent-contrast:#FFFFFF;
-    --cat-2:#0E8A78; --cat-3:#2A5FAE; --cat-4:#A8397E;
-    --good:#2F7D52; --warning:#BD6A1F; --serious:#C2542A; --critical:#B23A2E;
-    --shadow: 0 1px 2px rgba(22,35,58,.06), 0 6px 20px -8px rgba(22,35,58,.12);
-    --radius: 10px;
-  }
-  @media (prefers-color-scheme: dark){
-    :root:not([data-theme="light"]){
-      --ink:#E8ECEE; --ink-2:#9FB0BD;
-      --paper:#111922; --surface:#17212C; --surface-2:#1D2833;
-      --line:#2B3742; --accent:#BE8A3A; --accent-contrast:#12181F;
-      --cat-2:#1F9A82; --cat-3:#5488D9; --cat-4:#C85E9C;
-      --good:#4C9A6B; --warning:#D08A3E; --serious:#D2704A; --critical:#D0685C;
-      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 26px -10px rgba(0,0,0,.5);
-    }
-  }
-  :root[data-theme="dark"]{
-    --ink:#E8ECEE; --ink-2:#9FB0BD;
-    --paper:#111922; --surface:#17212C; --surface-2:#1D2833;
-    --line:#2B3742; --accent:#BE8A3A; --accent-contrast:#12181F;
-    --good:#4C9A6B; --warning:#D08A3E; --serious:#D2704A; --critical:#D0685C;
-    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 26px -10px rgba(0,0,0,.5);
-  }
-
-  *{ box-sizing:border-box; }
-  body{
-    margin:0; background:var(--paper); color:var(--ink);
-    font-family:"Public Sans", -apple-system, Segoe UI, sans-serif;
-    font-size:14px; line-height:1.5;
-  }
-  h1,h2,h3{ font-family:"Fraunces", Georgia, serif; text-wrap:balance; margin:0; }
-  a{ color:inherit; }
-  .mono{ font-family:"IBM Plex Mono", ui-monospace, monospace; }
-
-  /* ---------- Top bar (horizontal nav) ---------- */
-  .topbar{
-    position:sticky; top:0; z-index:20; background:var(--surface);
-    border-bottom:1px solid var(--line); box-shadow:var(--shadow);
-  }
-  .topbar-inner{
-    display:flex; align-items:center; gap:22px; padding:0 22px;
-    min-height:60px; flex-wrap:wrap;
-  }
-  .crest{ display:flex; align-items:center; gap:11px; padding:10px 0; }
-  .crest .mark{
-    width:34px; height:34px; border-radius:9px; flex:none;
-    background:linear-gradient(135deg, var(--accent), var(--cat-4));
-    display:flex; align-items:center; justify-content:center;
-    font-family:"Fraunces"; font-weight:700; color:#fff; font-size:16px;
-  }
-  .wordmark{ font-family:"Fraunces", serif; font-weight:600; font-size:15.5px; line-height:1.2; }
-  .wordmark small{ display:block; font-family:"Public Sans"; font-weight:600; font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-2); margin-top:2px; }
-
-  .top-nav{ display:flex; gap:2px; margin-left:8px; flex-wrap:wrap; }
-  .nav-btn{
-    all:unset; cursor:pointer; padding:9px 14px; border-radius:8px;
-    font-weight:600; font-size:13px; color:var(--ink-2);
-    display:flex; align-items:baseline; gap:8px; white-space:nowrap;
-  }
-  .nav-btn .n{ font-family:"IBM Plex Mono"; font-size:11px; opacity:.7; }
-  .nav-btn:hover{ background:var(--surface-2); color:var(--ink); }
-  .nav-btn.active{ background:var(--surface-2); color:var(--ink); box-shadow: inset 0 -2px 0 var(--accent); border-radius:8px 8px 0 0; }
-  .nav-btn.active .n{ color:var(--accent); opacity:1; }
-  .nav-btn.locked{ opacity:.4; cursor:not-allowed; }
-  .nav-btn.locked::after{ content:"🔒"; font-size:10px; margin-left:2px; }
-
-  .top-right{ margin-left:auto; display:flex; align-items:center; gap:14px; padding:8px 0; flex-wrap:wrap; }
-  .role-switch{ display:flex; align-items:center; gap:8px; font-size:12px; font-weight:600; color:var(--ink-2); }
-  .role-switch select{
-    font:inherit; font-family:"Public Sans"; font-size:12.5px; font-weight:600; color:var(--ink);
-    background:var(--surface-2); border:1px solid var(--line); border-radius:7px; padding:7px 9px; cursor:pointer;
-  }
-  .theme-btn{ all:unset; cursor:pointer; padding:7px 9px; border:1px solid var(--line); border-radius:7px; background:var(--surface-2); font-size:13px; }
-
-  /* ---------- Shell layout ---------- */
-  .shell{ display:grid; grid-template-columns:250px 1fr; min-height:calc(100vh - 61px); }
-  @media (max-width: 880px){ .shell{ grid-template-columns:1fr; } .rail{ position:static !important; height:auto !important; border-right:none; border-bottom:1px solid var(--line); } }
-
-  /* ---------- Rail (vertical sub-nav + filters) ---------- */
-  .rail{
-    background:var(--surface); border-right:1px solid var(--line);
-    padding:20px 16px; display:flex; flex-direction:column; gap:22px;
-    position:sticky; top:61px; height:calc(100vh - 61px); overflow-y:auto;
-  }
-  .rail-label{ font-size:10.5px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--ink-2); margin-bottom:8px; }
-  .sub-nav{ display:flex; flex-direction:column; gap:2px; }
-  .sub-link{
-    all:unset; cursor:pointer; padding:8px 11px; border-radius:7px; font-size:12.5px; font-weight:600; color:var(--ink-2);
-    display:flex; align-items:center; gap:8px;
-  }
-  .sub-link:hover{ background:var(--surface-2); color:var(--ink); }
-  .sub-link.active{ background:var(--surface-2); color:var(--ink); box-shadow:inset 2px 0 0 var(--accent); }
-  .sub-link .dot{ width:6px; height:6px; border-radius:50%; background:currentColor; flex:none; opacity:.5; }
-
-  .filter-block{ display:flex; flex-direction:column; gap:6px; }
-  .checkbox-group{ display:flex; flex-direction:column; gap:6px; }
-  .checkbox-row{ display:flex; flex-direction:row; align-items:center; gap:8px; font-size:12.5px; color:var(--ink); font-weight:500; cursor:pointer; }
-  .checkbox-row input[type="checkbox"]{ accent-color:var(--accent); width:14px; height:14px; margin:0; cursor:pointer; flex:none; }
-  .checkbox-row .code{ font-family:"IBM Plex Mono"; font-size:11px; color:var(--ink-2); }
-  .checkbox-row.all-row{ padding-bottom:7px; border-bottom:1px solid var(--line); margin-bottom:3px; font-weight:700; }
-  .pstl-group{ margin-left:20px; padding-left:8px; border-left:1px dashed var(--line); display:flex; flex-direction:column; gap:6px; margin-top:2px; }
-
-  .rail-footer{ margin-top:auto; font-size:11px; color:var(--ink-2); line-height:1.5; }
-  .pending-tag{ font-size:9.5px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--warning); background:color-mix(in srgb, var(--warning) 14%, transparent); padding:2px 7px; border-radius:99px; }
-
-  /* ---------- Content ---------- */
-  .content{ padding:26px 30px 60px; max-width:1180px; }
-  .letterhead{
-    display:flex; justify-content:space-between; align-items:flex-end; gap:16px;
-    padding-bottom:16px; border-bottom:2px solid var(--ink); margin-bottom:22px; flex-wrap:wrap;
-  }
-  .eyebrow{ font-size:11px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--accent); margin:0 0 6px; }
-  .letterhead h1{ font-size:30px; font-weight:600; }
-  .letterhead .lede{ font-size:13px; color:var(--ink-2); margin:6px 0 0; max-width:640px; }
-  .scope-note{ font-size:11.5px; color:var(--ink-2); }
-  .scope-note b{ color:var(--ink); font-family:"IBM Plex Mono"; }
-
-  .panel{ display:none; }
-  .panel.active{ display:block; }
-
-  .card-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(250px,1fr)); gap:14px; margin-bottom:14px; }
-  .card{
-    background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
-    padding:18px; box-shadow:var(--shadow); display:flex; flex-direction:column; gap:6px; position:relative;
-  }
-  .card .ico{ width:34px; height:34px; border-radius:9px; background:var(--surface-2); display:flex; align-items:center; justify-content:center; font-size:17px; margin-bottom:4px; }
-  .card h3{ font-size:15px; font-weight:600; }
-  .card p{ font-size:12.5px; color:var(--ink-2); margin:0; }
-  .card .card-foot{ margin-top:auto; padding-top:12px; display:flex; align-items:center; gap:8px; font-size:11.5px; font-weight:700; color:var(--accent); }
-  .card.link{ cursor:pointer; transition:transform .12s, box-shadow .12s; }
-  .card.link:hover{ transform:translateY(-2px); box-shadow: 0 4px 10px rgba(22,35,58,.1), 0 14px 30px -10px rgba(22,35,58,.22); }
-  .card.ready::before{ content:"LIVE"; position:absolute; top:14px; right:14px; font-size:9px; font-weight:700; letter-spacing:.06em; color:var(--good); background:color-mix(in srgb, var(--good) 14%, transparent); padding:3px 8px; border-radius:99px; }
-  .card.soon::before{ content:"PLACEHOLDER"; position:absolute; top:14px; right:14px; font-size:9px; font-weight:700; letter-spacing:.06em; color:var(--ink-2); background:var(--surface-2); border:1px solid var(--line); padding:3px 8px; border-radius:99px; }
-
-  .section-title{ font-size:13px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--ink-2); margin:26px 0 12px; }
-  .callout{ border:1px dashed var(--line); border-radius:var(--radius); padding:16px 18px; font-size:12.5px; color:var(--ink-2); background:var(--surface); }
-  .callout b{ color:var(--ink); }
-
-  /* Policies accordion (dropdown categories) */
-  .policy-list{ display:flex; flex-direction:column; gap:10px; max-width:860px; }
-  details.policy{ background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden; }
-  details.policy > summary{
-    list-style:none; cursor:pointer; padding:15px 18px; display:flex; align-items:center; gap:12px;
-    font-family:"Fraunces", serif; font-weight:600; font-size:16px; color:var(--ink);
-  }
-  details.policy > summary::-webkit-details-marker{ display:none; }
-  details.policy > summary .pico{ width:32px; height:32px; border-radius:8px; background:var(--surface-2); display:flex; align-items:center; justify-content:center; font-size:16px; flex:none; }
-  details.policy > summary .count{ margin-left:auto; font-size:11px; font-weight:700; color:var(--ink-2); background:var(--surface-2); border:1px solid var(--line); padding:3px 9px; border-radius:99px; font-family:"IBM Plex Mono"; }
-  details.policy > summary .chev{ transition:transform .18s; color:var(--ink-2); font-size:12px; }
-  details.policy[open] > summary .chev{ transform:rotate(90deg); }
-  details.policy[open] > summary{ border-bottom:1px solid var(--line); }
-  .policy-body{ padding:6px 18px 14px; display:flex; flex-direction:column; }
-  .doc-row{ display:flex; align-items:center; gap:10px; padding:10px 4px; border-bottom:1px solid var(--line); font-size:13px; }
-  .doc-row:last-child{ border-bottom:none; }
-  .doc-row .dico{ color:var(--ink-2); font-size:14px; flex:none; }
-  .doc-row .dname{ font-weight:600; color:var(--ink); }
-  .doc-row .dstate{ margin-left:auto; font-size:10px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--ink-2); background:var(--surface-2); border:1px solid var(--line); padding:3px 8px; border-radius:99px; }
-  .doc-row .dstate.ready{ color:var(--good); background:color-mix(in srgb, var(--good) 12%, transparent); border-color:transparent; }
-  .policy-hint{ font-size:11.5px; color:var(--ink-2); padding:8px 4px 0; }
-
-  /* Employee restricted banner */
-  .restricted{ display:flex; gap:12px; align-items:flex-start; background:var(--surface); border:1px solid var(--line); border-left:3px solid var(--accent); border-radius:var(--radius); padding:16px 18px; box-shadow:var(--shadow); }
-  .restricted .big{ font-size:22px; }
-  .restricted h3{ font-size:15px; margin-bottom:4px; }
-  .restricted p{ font-size:12.5px; color:var(--ink-2); margin:0; }
-</style>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Public+Sans:wght@400;500;550;600;650;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="assets/portal.css?v=6">
 </head>
 <body>
 
-<!-- ============ TOP BAR ============ -->
 <header class="topbar">
-  <div class="topbar-inner">
-    <div class="crest">
-      <div class="mark">F</div>
-      <div class="wordmark">Fountainhead HR Portal<small>Central HR · Group of Schools</small></div>
-    </div>
-
-    <nav class="top-nav" id="topNav">
-      <button class="nav-btn active" data-panel="hiring"><span class="n">01</span> Hiring &amp; Onboarding</button>
-      <button class="nav-btn" data-panel="exit"><span class="n">02</span> Exit &amp; Attrition</button>
-      <button class="nav-btn" data-panel="compliance"><span class="n">03</span> HR Compliance</button>
-      <button class="nav-btn" data-panel="policies"><span class="n">04</span> Policies &amp; Guidelines</button>
-    </nav>
-
-    <div class="top-right">
-      <div class="role-switch">
-        <span>View as</span>
-        <select id="roleSelect" title="Role-based access preview">
-          <option value="director">Director / HR</option>
-          <option value="employee">Employee</option>
-        </select>
-      </div>
-      <button class="theme-btn" id="themeBtn" title="Toggle light / dark">◐</button>
-    </div>
+  <button class="menu-btn" id="menuBtn" type="button" aria-label="Open navigation">
+    <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M2 4.5h14M2 9h14M2 13.5h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+  </button>
+  <a class="crest" href="#/overview/snapshot" aria-label="Fountainhead HR Portal home">
+    <span class="crest-mark">F</span>
+    <span class="crest-words">Fountainhead HR<small>Central HR · Group of Schools</small></span>
+  </a>
+  <nav class="top-nav" id="topNav" aria-label="Sections"></nav>
+  <div class="top-right">
+    <span class="fresh" id="fresh"><i class="dot"></i>Loading data…</span>
+    <label class="sr-only" for="roleSelect">View as</label>
+    <select class="band-select" id="roleSelect" title="Preview what each audience sees">
+      <option value="director">Director / HR view</option>
+      <option value="employee">Employee view</option>
+    </select>
+    <button class="icon-btn" id="themeBtn" type="button" aria-label="Toggle light or dark theme" title="Light / dark">
+      <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5a6.5 6.5 0 1 0 0 13z" fill="currentColor"/><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
+    </button>
   </div>
 </header>
 
-<!-- ============ SHELL ============ -->
+<div class="scrim" id="scrim"></div>
+
 <div class="shell">
-
-  <!-- ---- Vertical rail: sub-nav + entity filter ---- -->
-  <aside class="rail">
+  <aside class="rail" aria-label="Report navigation">
     <div>
-      <div class="rail-label" id="subNavLabel">In this section</div>
-      <nav class="sub-nav" id="subNav"><!-- populated by JS --></nav>
+      <div class="rail-label">Reports</div>
+      <ul class="tree" id="tree"></ul>
     </div>
-
-    <div class="filter-block">
-      <div class="rail-label">Entity / Campus</div>
-      <div class="checkbox-group" id="entityGroup">
-        <label class="checkbox-row all-row"><input type="checkbox" id="entAll" checked> All entities</label>
-        <label class="checkbox-row"><input type="checkbox" class="ent" checked> <span>Fountainhead Preschool - Vesu</span> <span class="code">FPV</span></label>
-        <label class="checkbox-row"><input type="checkbox" class="ent" checked> <span>Fountainhead Preschool - Adajan</span> <span class="code">FPA</span></label>
-        <label class="checkbox-row"><input type="checkbox" class="ent" checked> <span>Fountainhead School - Malgama</span> <span class="code">FSM</span></label>
-        <label class="checkbox-row"><input type="checkbox" class="ent" checked> <span>Fountainhead Avadh Learning Hub</span> <span class="code">FALH</span></label>
-        <label class="checkbox-row"><input type="checkbox" class="ent" checked> <span>Fountainhead-Wockhardt Global School</span> <span class="code">FWGS</span></label>
-        <label class="checkbox-row"><input type="checkbox" class="ent" id="entPstl" checked> <span>Protego Services Pvt. Ltd.</span> <span class="code">PSPL</span></label>
-        <div class="pstl-group">
-          <label class="checkbox-row"><input type="checkbox" class="ent pstl-child" checked> <span>PSPL — Unit 1</span> <span class="code">PSPL-1</span></label>
-          <label class="checkbox-row"><input type="checkbox" class="ent pstl-child" checked> <span>PSPL — Unit 2</span> <span class="code">PSPL-2</span></label>
-        </div>
-      </div>
-    </div>
-
-    <div class="rail-footer">
-      <span class="pending-tag">Layout draft</span><br>
-      Structure for review. Entity names, sub-sections and data wiring (Nucleus) to be confirmed from the navigation sheet.
-    </div>
+    <div class="rail-foot" id="railFoot"></div>
   </aside>
 
-  <!-- ---- Main content ---- -->
-  <main class="content">
-
-    <!-- ===== 01 · Hiring & Onboarding ===== -->
-    <section class="panel active" id="panel-hiring">
-      <div class="letterhead">
-        <div>
-          <p class="eyebrow">Section 01</p>
-          <h1>Hiring &amp; Onboarding</h1>
-          <p class="lede">Recruitment pipeline, joining status and onboarding checklists across all campuses.</p>
-        </div>
-        <div class="scope-note">Scope: <b id="scope-hiring">All entities</b></div>
-      </div>
-      <div class="card-grid">
-        <a class="card link ready" href="workforce-register.html#overview">
-          <div class="ico">📋</div>
-          <h3>Workforce Register</h3>
-          <p>Overview of headcount, filters and charts across entities.</p>
-          <div class="card-foot">Open report →</div>
-        </a>
-        <a class="card link ready" href="workforce-register.html#recruitment">
-          <div class="ico">📈</div>
-          <h3>Recruitment</h3>
-          <p>Open positions, applications and the offer &amp; joining funnel.</p>
-          <div class="card-foot">Open report →</div>
-        </a>
-        <a class="card link ready" href="workforce-register.html#newjoinees">
-          <div class="ico">🧑‍💼</div>
-          <h3>New Joinees</h3>
-          <p>Recent joiners with joining dates and status by entity.</p>
-          <div class="card-foot">Open report →</div>
-        </a>
-        <div class="card soon"><div class="ico">📑</div><h3>Monthly Hiring Report</h3><p>Auto-generated monthly summary for directors.</p><div class="card-foot">Placeholder</div></div>
-      </div>
-      <div class="callout"><b>Source:</b> To be pulled from Nucleus + existing recruitment sheets. This section is Director / HR only.</div>
-    </section>
-
-    <!-- ===== 02 · Exit & Attrition ===== -->
-    <section class="panel" id="panel-exit">
-      <div class="letterhead">
-        <div>
-          <p class="eyebrow">Section 02</p>
-          <h1>Exit &amp; Attrition</h1>
-          <p class="lede">Separations, attrition rate and full-and-final status, broken down by entity.</p>
-        </div>
-        <div class="scope-note">Scope: <b id="scope-exit">All entities</b></div>
-      </div>
-      <div class="card-grid">
-        <a class="card link ready" href="workforce-register.html#attrition">
-          <div class="ico">📉</div>
-          <h3>Attrition &amp; Exits</h3>
-          <p>Headcount lost, attrition % and exits by campus and period.</p>
-          <div class="card-foot">Open report →</div>
-        </a>
-        <div class="card soon"><div class="ico">💬</div><h3>Exit Interview Insights</h3><p>Themes and reasons captured at exit.</p><div class="card-foot">Placeholder</div></div>
-        <div class="card soon"><div class="ico">🧾</div><h3>F&amp;F Settlement Tracker</h3><p>Full &amp; final settlement status against the 30-day target.</p><div class="card-foot">Placeholder</div></div>
-      </div>
-      <div class="callout"><b>Source:</b> Attrition data already in the locker — to be brought in entity-wise. Director / HR only.</div>
-    </section>
-
-    <!-- ===== 03 · HR Compliance ===== -->
-    <section class="panel" id="panel-compliance">
-      <div class="letterhead">
-        <div>
-          <p class="eyebrow">Section 03</p>
-          <h1>HR Compliance</h1>
-          <p class="lede">Statutory compliance, checklists and audit status across entities including Protego.</p>
-        </div>
-        <div class="scope-note">Scope: <b id="scope-compliance">All entities</b></div>
-      </div>
-      <div class="card-grid">
-        <a class="card link ready" href="workforce-register.html#compliance">
-          <div class="ico">🛡️</div>
-          <h3>Compliance Dashboard</h3>
-          <p>Compliant vs non-compliant core areas by entity.</p>
-          <div class="card-foot">Open report →</div>
-        </a>
-        <a class="card link ready" href="workforce-register.html#tickets">
-          <div class="ico">🎫</div>
-          <h3>HR Tickets</h3>
-          <p>HR query &amp; request tickets with resolution status.</p>
-          <div class="card-foot">Open report →</div>
-        </a>
-        <div class="card soon"><div class="ico">📌</div><h3>Compliance Checklists</h3><p>PF, ESI, PT, TDS filing and payment checklists.</p><div class="card-foot">Placeholder</div></div>
-        <div class="card soon"><div class="ico">🗂️</div><h3>Statutory Documents</h3><p>Registers, filings and audit evidence repository.</p><div class="card-foot">Placeholder</div></div>
-      </div>
-      <div class="callout"><b>Source:</b> Compliance requirements &amp; checklists. Director / HR only.</div>
-    </section>
-
-    <!-- ===== 04 · Policies & Guidelines (employee-facing) ===== -->
-    <section class="panel" id="panel-policies">
-      <div class="letterhead">
-        <div>
-          <p class="eyebrow">Section 04 · Employee-facing</p>
-          <h1>Policies &amp; Guidelines</h1>
-          <p class="lede">HR handbook, survival guide and policy documents — the section every employee can access.</p>
-        </div>
-        <div class="scope-note">Visible to <b>all employees</b></div>
-      </div>
-      <div class="policy-list" id="policyList">
-        <details class="policy" open>
-          <summary><span class="pico">📕</span> HR Handbook <span class="count">0 docs</span><span class="chev">▶</span></summary>
-          <div class="policy-body">
-            <div class="doc-row"><span class="dico">📄</span><span class="dname">Employee Handbook 2026–27</span><span class="dstate">To upload</span></div>
-            <div class="policy-hint">Ritu will upload the handbook here. Sub-documents can be added as separate rows.</div>
-          </div>
-        </details>
-
-        <details class="policy">
-          <summary><span class="pico">🧭</span> HR Survival Guide <span class="count">0 docs</span><span class="chev">▶</span></summary>
-          <div class="policy-body">
-            <div class="doc-row"><span class="dico">📄</span><span class="dname">New Joinee Survival Guide</span><span class="dstate">To upload</span></div>
-            <div class="policy-hint">Quick-start guide for new and existing staff.</div>
-          </div>
-        </details>
-
-        <details class="policy">
-          <summary><span class="pico">🌴</span> Leave &amp; Attendance <span class="count">0 docs</span><span class="chev">▶</span></summary>
-          <div class="policy-body">
-            <div class="doc-row"><span class="dico">📄</span><span class="dname">Leave Policy</span><span class="dstate">To upload</span></div>
-            <div class="doc-row"><span class="dico">📄</span><span class="dname">Attendance &amp; Working Hours Policy</span><span class="dstate">To upload</span></div>
-          </div>
-        </details>
-
-        <details class="policy">
-          <summary><span class="pico">⚖️</span> Code of Conduct &amp; POSH <span class="count">0 docs</span><span class="chev">▶</span></summary>
-          <div class="policy-body">
-            <div class="doc-row"><span class="dico">📄</span><span class="dname">Code of Conduct</span><span class="dstate">To upload</span></div>
-            <div class="doc-row"><span class="dico">📄</span><span class="dname">POSH Policy &amp; Committee</span><span class="dstate">To upload</span></div>
-            <div class="doc-row"><span class="dico">📄</span><span class="dname">Grievance Redressal</span><span class="dstate">To upload</span></div>
-          </div>
-        </details>
-
-        <details class="policy">
-          <summary><span class="pico">💰</span> Payroll &amp; Benefits <span class="count">0 docs</span><span class="chev">▶</span></summary>
-          <div class="policy-body">
-            <div class="doc-row"><span class="dico">📄</span><span class="dname">Payroll &amp; Reimbursement Policy</span><span class="dstate">To upload</span></div>
-            <div class="doc-row"><span class="dico">📄</span><span class="dname">Benefits &amp; Insurance</span><span class="dstate">To upload</span></div>
-          </div>
-        </details>
-
-        <details class="policy">
-          <summary><span class="pico">🚪</span> Onboarding &amp; Exit <span class="count">0 docs</span><span class="chev">▶</span></summary>
-          <div class="policy-body">
-            <div class="doc-row"><span class="dico">📄</span><span class="dname">Onboarding Checklist</span><span class="dstate">To upload</span></div>
-            <div class="doc-row"><span class="dico">📄</span><span class="dname">Exit &amp; Full-and-Final Process</span><span class="dstate">To upload</span></div>
-          </div>
-        </details>
-
-        <details class="policy">
-          <summary><span class="pico">📥</span> Forms &amp; Templates <span class="count">0 docs</span><span class="chev">▶</span></summary>
-          <div class="policy-body">
-            <div class="doc-row"><span class="dico">📎</span><span class="dname">Leave Application Form</span><span class="dstate">To upload</span></div>
-            <div class="doc-row"><span class="dico">📎</span><span class="dname">Reimbursement Claim Form</span><span class="dstate">To upload</span></div>
-            <div class="doc-row"><span class="dico">📎</span><span class="dname">No-Objection / Verification Templates</span><span class="dstate">To upload</span></div>
-          </div>
-        </details>
-      </div>
-      <div class="callout" style="margin-top:16px;"><b>How this works:</b> Each dropdown is a category. Ritu adds documents as rows inside — this replaces the cluttered Drive. Employees only see this page; reports stay Director/HR-only.</div>
-    </section>
-
+  <main class="main" id="main">
+    <div class="main-inner" id="mainInner"></div>
   </main>
 </div>
 
-<script>
-(function(){
-  // ---- Section navigation (top nav <-> panels + rail sub-nav) ----
-  var SUBS = {
-    hiring:     ['Workforce Register','Recruitment Dashboard','Onboarding Checklist','Monthly Hiring Report'],
-    exit:       ['Attrition Report','Exit Register','Exit Interview Insights','F&F Settlement Tracker'],
-    compliance: ['Compliance Dashboard','Compliance Checklists','Statutory Documents','Audit Calendar'],
-    policies:   ['HR Handbook','HR Survival Guide','Leave & Attendance','Code of Conduct & POSH','Payroll & Benefits','Onboarding & Exit','Forms & Templates']
-  };
-  var navBtns = document.querySelectorAll('.nav-btn');
-  var subNav = document.getElementById('subNav');
-
-  function buildSubNav(key){
-    subNav.innerHTML = '';
-    (SUBS[key]||[]).forEach(function(name, i){
-      var b = document.createElement('button');
-      b.className = 'sub-link' + (i===0 ? ' active' : '');
-      b.innerHTML = '<span class="dot"></span>' + name;
-      b.addEventListener('click', function(){
-        subNav.querySelectorAll('.sub-link').forEach(function(x){ x.classList.remove('active'); });
-        b.classList.add('active');
-        // In Policies, open + scroll to the matching dropdown.
-        if(key === 'policies'){
-          var summaries = document.querySelectorAll('#policyList details.policy > summary');
-          summaries.forEach(function(s){
-            if(s.textContent.replace(/\s+/g,' ').indexOf(name) !== -1){
-              var d = s.parentElement;
-              d.open = true;
-              d.scrollIntoView({behavior:'smooth', block:'start'});
-            }
-          });
-        }
-      });
-      subNav.appendChild(b);
-    });
-  }
-
-  function show(key){
-    navBtns.forEach(function(b){ b.classList.toggle('active', b.dataset.panel===key); });
-    document.querySelectorAll('.panel').forEach(function(p){ p.classList.toggle('active', p.id==='panel-'+key); });
-    buildSubNav(key);
-  }
-
-  navBtns.forEach(function(b){
-    b.addEventListener('click', function(){
-      if(b.classList.contains('locked')) return;
-      show(b.dataset.panel);
-    });
-  });
-
-  // ---- Role-based access ----
-  var roleSelect = document.getElementById('roleSelect');
-  var RESTRICTED = ['hiring','exit','compliance']; // director/HR only
-  function applyRole(){
-    var emp = roleSelect.value === 'employee';
-    navBtns.forEach(function(b){
-      var locked = emp && RESTRICTED.indexOf(b.dataset.panel) !== -1;
-      b.classList.toggle('locked', locked);
-    });
-    if(emp){ show('policies'); }
-  }
-  roleSelect.addEventListener('change', applyRole);
-
-  // ---- Entity filter (master + PSTL bifurcation) ----
-  var entAll = document.getElementById('entAll');
-  var ents = document.querySelectorAll('.ent');
-  var entPstl = document.getElementById('entPstl');
-  var pstlChildren = document.querySelectorAll('.pstl-child');
-
-  function updateScope(){
-    var checked = Array.prototype.filter.call(ents, function(c){ return c.checked && !c.classList.contains('pstl-child'); });
-    var total = document.querySelectorAll('.ent:not(.pstl-child)').length;
-    var txt = checked.length === total ? 'All entities' : (checked.length === 0 ? 'No entity selected' : checked.length + ' of ' + total + ' entities');
-    ['hiring','exit','compliance'].forEach(function(k){
-      var el = document.getElementById('scope-'+k); if(el) el.textContent = txt;
-    });
-  }
-  entAll.addEventListener('change', function(){
-    ents.forEach(function(c){ c.checked = entAll.checked; });
-    updateScope();
-  });
-  ents.forEach(function(c){
-    c.addEventListener('change', function(){
-      // PSTL parent toggles its children
-      if(c === entPstl){ pstlChildren.forEach(function(ch){ ch.checked = entPstl.checked; }); }
-      // any child unchecking unchecks parent; all children checked re-checks parent
-      if(c.classList.contains('pstl-child')){
-        entPstl.checked = Array.prototype.every.call(pstlChildren, function(ch){ return ch.checked; });
-      }
-      var parents = document.querySelectorAll('.ent:not(.pstl-child)');
-      entAll.checked = Array.prototype.every.call(parents, function(p){ return p.checked; });
-      updateScope();
-    });
-  });
-
-  // ---- Theme toggle ----
-  document.getElementById('themeBtn').addEventListener('click', function(){
-    var root = document.documentElement;
-    var cur = root.getAttribute('data-theme');
-    var next = cur === 'dark' ? 'light' : (cur === 'light' ? 'dark' : (matchMedia('(prefers-color-scheme: dark)').matches ? 'light' : 'dark'));
-    root.setAttribute('data-theme', next);
-  });
-
-  // init
-  buildSubNav('hiring');
-  applyRole();
-  updateScope();
-})();
-</script>
+<!-- bump ?v= when assets change so browsers don't serve a stale copy -->
+<script src="data/hr-data.js?v=6"></script>
+<script src="assets/portal.js?v=6"></script>
 </body>
 </html>

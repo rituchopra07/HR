@@ -4,3 +4,7 @@ dist/
 .DS_Store
 *.log
 .claude/
+
+# HR data exporter — local connection config & caches (never commit credentials)
+tools/sources.json
+__pycache__/

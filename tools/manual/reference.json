@@ -1,0 +1,9 @@
+{
+  "_comment": "Aggregate reference figures entered by hand. Used to show how complete Nucleus data is versus the monthly headcount HR already receives.",
+  "headcount_reference": {
+    "source": "Monthly headcount report (Jatin, Data & Insights)",
+    "as_of": "2026-09-01",
+    "staff": { "FSK": 736, "FSM": 25, "FPV": 93, "FPA": 37, "FALH": 19, "FWGS": 121 },
+    "students": { "FSK": 2627, "FSM": 118, "FPV+FPA": 406, "FALH": 29, "FWGS": 319 }
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "_comment": "Copy to tools/sources.json (git-ignored) and adjust. Passwords are read from environment variables, never stored here.",
+  "odbc_driver": "ODBC Driver 17 for SQL Server",
+
+  "nucleus_v1": {
+    "campus": "FSK",
+    "server": "localhost\\MSSQLSERVER2022",
+    "database": "INVENTORY.MDF",
+    "trusted_connection": true
+  },
+
+  "nucleus_edu": {
+    "server": "YOUR-EDU-SQL-HOST",
+    "user": "readonly_user",
+    "password_env": "HR_EDU_DB_PASSWORD",
+    "admin_database": "SchoolERPAdminDB",
+    "campuses": {
+      "FSM": "FSNCERPDB",
+      "FPV": "TVELCERPDB",
+      "FPA": "FELCERPDB",
+      "FALH": "FALHERPDB",
+      "FWGS": "FWGSERPDB"
+    }
+  }
+}
