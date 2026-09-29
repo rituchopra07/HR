@@ -217,10 +217,22 @@
   }
 
   /* ---------------------------------------------------------------- components */
-  function tile(label, value, unit, sub) {
-    return h("div", { class: "tile" }, h("div", { class: "lbl", text: label }),
-      h("div", { class: "val" }, value, unit ? h("small", { text: unit }) : null),
-      sub ? h("div", { class: "sub" }, sub) : null);
+  /* A number rendered as text ("1,068", "61.2%", "7.6") becomes a span the count-up animation can drive. */
+  var NUM_RE = /^(-?[\d,]*\.?\d+)(%?)$/;
+  function numSpan(text, key) {
+    var m = typeof text === "string" && text.match(NUM_RE);
+    if (!m) return text;
+    var dec = (m[1].split(".")[1] || "").length;
+    return h("span", { class: "num", "data-v": m[1].replace(/,/g, ""), "data-dec": String(dec), "data-suffix": m[2], "data-key": key, text: text });
+  }
+  /* opts.go = route the tile opens (tiles become links on the snapshot) */
+  function tile(label, value, unit, sub, opts) {
+    opts = opts || {};
+    var kids = [h("div", { class: "lbl", text: label }),
+      h("div", { class: "val" }, numSpan(value, label), unit ? h("small", { text: unit }) : null),
+      sub ? h("div", { class: "sub" }, sub) : null];
+    if (opts.go) return h("a", { class: "tile is-link", href: "#/" + opts.go, "aria-label": label + " — open report" }, kids, h("span", { class: "go", "aria-hidden": "true", text: "→" }));
+    return h("div", { class: "tile" }, kids);
   }
   /* delta vs previous period; goodWhenUp decides colour */
   function delta(cur, prev, goodWhenUp, unit, label) {
@@ -266,8 +278,8 @@
     o = o || {};
     var max = o.max || Math.max.apply(null, items.map(function (i) { return i.value || 0; }).concat([1]));
     if (!items.length) return empty("Nothing in this selection");
-    return h("div", { class: "bars" }, items.map(function (it) {
-      var fill = h("div", { class: "fill", tabindex: "0", style: { width: Math.max(0, (it.value || 0) / max * 100) + "%", background: it.color || o.color || "var(--s1)" } });
+    return h("div", { class: "bars" }, items.map(function (it, i) {
+      var fill = h("div", { class: "fill", tabindex: "0", style: { width: Math.max(0, (it.value || 0) / max * 100) + "%", background: it.color || o.color || "var(--s1)", "--i": String(i) } });
       tip(fill, function () { return { head: it.label, rows: [{ color: it.color || o.color || "var(--s1)", value: (o.fmt || fmt)(it.value), label: it.tipLabel || o.unit || "" }].concat(it.tipRows || []) }; });
       return h("div", { class: "bar" },
         h("span", { class: "nm", title: it.label }, it.swatch ? h("i", { class: "sw", style: { background: it.swatch } }) : null, it.label),
@@ -281,11 +293,11 @@
     o = o || {};
     if (!rows.length) return empty("Nothing in this selection");
     var totals = {}; series.forEach(function (s) { totals[s.key] = 0; });
-    var el = h("div", { class: "stack" }, rows.map(function (r) {
+    var el = h("div", { class: "stack" }, rows.map(function (r, ri) {
       var tot = sum(series, function (s) { return r.parts[s.key] || 0; });
       series.forEach(function (s) { totals[s.key] += r.parts[s.key] || 0; });
       return h("div", { class: "stack-row" }, h("span", { class: "nm", title: r.label, text: r.label }),
-        h("div", { class: "segs" }, series.map(function (s) {
+        h("div", { class: "segs", style: { "--i": String(ri) } }, series.map(function (s) {
           var v = r.parts[s.key] || 0; if (!v) return null;
           var seg = h("i", { style: { width: (v / tot * 100) + "%", background: s.color } });
           return tip(seg, function () { return { head: r.label, rows: [{ color: s.color, value: fmt(v) + " · " + fmt1(v / tot * 100) + "%", label: s.label }] }; });
@@ -320,6 +332,8 @@
     var maxI = totals.indexOf(maxV);
     xs.forEach(function (x, i) {
       var cx = padL + band * i + band / 2, yCursor = padT + plotH;
+      var colG = sv("g", { class: "col", style: "--i:" + i });
+      g.appendChild(colG);
       series.forEach(function (s, si) {
         var v = s.values[x.key] || 0; if (!v) return;
         var hgt = (v / top) * plotH, isTop = !series.slice(si + 1).some(function (s2) { return (s2.values[x.key] || 0) > 0; });
@@ -328,7 +342,7 @@
         var r = isTop ? Math.min(4, (y0 - y1) / 2, bw / 2) : 0;
         var d = "M" + (cx - bw / 2) + "," + y0 + "V" + (y1 + r) + (r ? "Q" + (cx - bw / 2) + "," + y1 + " " + (cx - bw / 2 + r) + "," + y1 : "") +
           "H" + (cx + bw / 2 - r) + (r ? "Q" + (cx + bw / 2) + "," + y1 + " " + (cx + bw / 2) + "," + (y1 + r) : "") + "V" + y0 + "Z";
-        g.appendChild(sv("path", { d: d, fill: s.color }));
+        colG.appendChild(sv("path", { d: d, fill: s.color }));
         yCursor = y1;
       });
       if (i % every === 0 || i === xs.length - 1) {
@@ -339,6 +353,8 @@
         dl.textContent = o.pct ? fmt1(totals[i]) + "%" : fmt(totals[i]); g.appendChild(dl);
       }
       var hit = sv("rect", { class: "hit", x: padL + band * i, y: padT, width: band, height: plotH });
+      hit.addEventListener("pointerenter", function () { g.classList.add("hovering"); colG.classList.add("on"); });
+      hit.addEventListener("pointerleave", function () { g.classList.remove("hovering"); colG.classList.remove("on"); });
       tip(hit, function () {
         return { head: x.tipLabel || x.label, rows: series.filter(function (s) { return (s.values[x.key] || 0) > 0 || series.length === 1; }).map(function (s) { return { color: s.color, value: o.pct ? fmt1(s.values[x.key] || 0) + "%" : fmt(s.values[x.key] || 0), label: s.label }; }) };
       });
@@ -421,19 +437,19 @@
       var hero = h("div", { class: "hero" },
         h("div", { class: "hero-main" },
           h("div", { class: "lbl", text: "People on roll" }),
-          h("div", { class: "fig", text: fmt(total) }),
+          h("div", { class: "fig" }, numSpan(fmt(total), "hero")),
           h("div", { class: "sub", text: "Across " + S.campuses.size + " of " + ALL_C.length + " campuses, as on the latest Nucleus snapshot." }),
           h("div", { class: "split" },
             h("div", null, h("b", { text: fmt(total - support) }), h("span", { text: "Teaching & admin" })),
             h("div", null, h("b", { text: fmt(support) }), h("span", { text: "Support staff" })),
             h("div", null, h("b", { text: students ? fmt1(students / Math.max(total, 1)) + " : 1" : "—" }), h("span", { text: "Students per staff" })))),
         h("div", { class: "tiles" },
-          tile("Attrition", fs.rate == null ? "—" : fmt1(fs.rate), "%", [fs.months < 12 && fs.annual != null ? fmt1(fs.annual) + "% annualised · " : "", delta(fs.rate, fsPrev && fsPrev.rate, false, "pp", prev && prev.label)]),
-          tile("Exits", fmt(fs.exits), null, delta(fs.exits, fsPrev && fsPrev.exits, false, null, prev && prev.label)),
-          tile("New joiners", fmt(fs.joins), null, delta(fs.joins, fsPrev && fsPrev.joins, true, null, prev && prev.label)),
-          tile("HR tickets closed on time", pctTxt(slaPct), null, [fmt(sum(tix)) + " raised · ", delta(slaPct, slaPrev, true, "pp", prev && prev.label)]),
-          tile("Applications received", fmt(apps), null, delta(apps, appsPrev, true, null, prev && prev.label)),
-          tile("Retirement watch", fmt(sum(scoped(DB.age, ["c", "e", "g"]).filter(function (r) { return r.ab === "58+"; }))), null, "Staff aged 58 or above")));
+          tile("Attrition", fs.rate == null ? "—" : fmt1(fs.rate), "%", [fs.months < 12 && fs.annual != null ? fmt1(fs.annual) + "% annualised · " : "", delta(fs.rate, fsPrev && fsPrev.rate, false, "pp", prev && prev.label)], { go: "exit/attrition" }),
+          tile("Exits", fmt(fs.exits), null, delta(fs.exits, fsPrev && fsPrev.exits, false, null, prev && prev.label), { go: "exit/attrition" }),
+          tile("New joiners", fmt(fs.joins), null, delta(fs.joins, fsPrev && fsPrev.joins, true, null, prev && prev.label), { go: "hiring/joinees" }),
+          tile("HR tickets closed on time", pctTxt(slaPct), null, [fmt(sum(tix)) + " raised · ", delta(slaPct, slaPrev, true, "pp", prev && prev.label)], { go: "compliance/tickets" }),
+          tile("Applications received", fmt(apps), null, delta(apps, appsPrev, true, null, prev && prev.label), { go: "hiring/recruitment" }),
+          tile("Retirement watch", fmt(sum(scoped(DB.age, ["c", "e", "g"]).filter(function (r) { return r.ab === "58+"; }))), null, "Staff aged 58 or above", { go: "overview/demographics" })));
 
       var campusBars = ALL_C.filter(function (c) { return S.campuses.has(c); }).map(function (c) {
         var n = byCampus.get(c) || 0, r = ref && ref.staff[c];
@@ -1022,12 +1038,14 @@
         if (locked) return;
         var now = li.getAttribute("aria-expanded") !== "true";
         li.setAttribute("aria-expanded", String(now)); expanded[s.id] = now; store("hr.portal.tree", expanded);
+        li.querySelectorAll(".tree-kids a").forEach(function (a) { if (now) a.removeAttribute("tabindex"); else a.setAttribute("tabindex", "-1"); });
       });
       li.appendChild(btn);
-      li.appendChild(h("ul", { class: "tree-kids" }, sectionViews(s.id).map(function (v) {
-        return h("li", null, h("a", { href: "#/" + v.id, "aria-current": current && current.id === v.id ? "page" : null },
+      // wrapper animates open/close height (grid-template-rows 0fr -> 1fr)
+      li.appendChild(h("div", { class: "tree-kids-wrap" }, h("ul", { class: "tree-kids" }, sectionViews(s.id).map(function (v) {
+        return h("li", null, h("a", { href: "#/" + v.id, tabindex: open ? null : "-1", "aria-current": current && current.id === v.id ? "page" : null },
           v.title, v.soon ? h("span", { class: "tag", text: "Planned" }) : v.tag && !(RAW.tracker && RAW.tracker.status === "ready") ? h("span", { class: "tag looker", text: "Pending" }) : null));
-      })));
+      }))));
       tree.appendChild(li);
     });
   }
@@ -1141,17 +1159,68 @@
   }
   function onFilter(close) { save(); var owner = popOwner && popOwner.querySelector(".k") && popOwner.querySelector(".k").textContent; if (close) closePop(); rerender(); if (!close && owner) { /* keep popover open, re-anchor to the refreshed chip */ var chips = document.querySelectorAll(".fchip"); chips.forEach(function (c) { if (c.querySelector(".k").textContent === owner) { popOwner = null; c.click(); } }); } }
 
+  /* ----- motion ----- */
+  var REDUCED = matchMedia("(prefers-reduced-motion: reduce)");
+  var lastNums = {};                       // last value shown per tile, so filter changes tween old -> new
+  function countUp(root, fromLast) {
+    var els = root.querySelectorAll(".num[data-v]");
+    els.forEach(function (el) {
+      var to = parseFloat(el.dataset.v), dec = +el.dataset.dec || 0, suf = el.dataset.suffix || "", key = el.dataset.key;
+      var from = fromLast && key in lastNums ? lastNums[key] : 0;
+      lastNums[key] = to;
+      // hidden tabs pause requestAnimationFrame — never leave a half-counted number on screen
+      if (REDUCED.matches || document.hidden || from === to || !isFinite(to)) return;
+      var fmtN = function (v) { return (dec ? v.toFixed(dec) : NF.format(Math.round(v))) + suf; };
+      var t0 = performance.now(), dur = fromLast ? 520 : 900, done = false, finalText = el.textContent;
+      var finish = function () { if (!done) { done = true; el.textContent = finalText; } };
+      setTimeout(finish, dur + 150);
+      el.textContent = fmtN(from);
+      requestAnimationFrame(function step(t) {
+        if (done) return;
+        var k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3);   // ease-out cubic
+        if (k >= 1) return finish();
+        el.textContent = fmtN(from + (to - from) * e);
+        requestAnimationFrame(step);
+      });
+    });
+  }
+  /* soft spotlight that follows the pointer across cards and tiles */
+  document.addEventListener("pointermove", function (e) {
+    var c = e.target.closest && e.target.closest(".card, .tile, .ccard, details.policy");
+    if (!c) return;
+    var b = c.getBoundingClientRect();
+    c.style.setProperty("--mx", (e.clientX - b.left) + "px");
+    c.style.setProperty("--my", (e.clientY - b.top) + "px");
+  }, { passive: true });
+
+  /* toast (single, bottom-centre) */
+  var TOAST = h("div", { class: "toast", role: "status", "aria-live": "polite" }); document.body.appendChild(TOAST);
+  var toastTimer = null;
+  function toast(msg, action) {
+    TOAST.textContent = ""; append(TOAST, h("span", { text: msg }));
+    if (action) append(TOAST, h("button", { type: "button", onclick: function () { TOAST.classList.remove("on"); action.fn(); } }, action.label));
+    TOAST.classList.add("on"); clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { TOAST.classList.remove("on"); }, 4200);
+  }
+
   /* ----- page render ----- */
   function rerender() {
     if (!current) return;
     var y = window.scrollY;
-    renderPage(current);
+    document.body.classList.add("is-refresh");          // filter change: no entrance stagger, quick chart re-grow
+    renderPage(current, true);
     window.scrollTo(0, y);
+    setTimeout(function () { document.body.classList.remove("is-refresh"); }, 400);
   }
-  function renderPage(v) {
+  function renderPage(v, isRefresh) {
     var sec = SECTIONS.filter(function (s) { return s.id === v.sec; })[0];
     document.title = v.title + " · Fountainhead HR";
     var main = $("#mainInner"); main.textContent = "";
+    if (S.role === "employee") {
+      main.appendChild(h("div", { class: "preview-banner" }, h("span", { class: "pb-dot", "aria-hidden": "true" }),
+        h("span", null, h("b", { text: "Employee preview" }), " — this is exactly what staff see: Policies & Guidelines only."),
+        h("button", { type: "button", onclick: function () { setRole("director"); } }, "Back to Director / HR")));
+    }
     var asof = null;
     if (RAW && v.sec !== "policies") {
       var srcs = RAW.meta.sources;
@@ -1166,7 +1235,53 @@
     try { append(body, v.render()); }
     catch (err) { console.error(err); append(body, empty("This report couldn't be drawn", String(err && err.message || err))); }
     main.appendChild(body);
-    renderTopNav(); renderTree();
+    countUp(body, !!isRefresh);
+    renderTopNav(); renderTree(); renderViewAs();
+  }
+
+  /* ----- "View as" switch: segmented control with a sliding thumb ----- */
+  var ROLES = [
+    { id: "director", label: "Director / HR", short: "Director", desc: "All reports",
+      icon: "M3 7.5h12v7.5H3zM6.5 7.5V5.2A1.2 1.2 0 0 1 7.7 4h2.6a1.2 1.2 0 0 1 1.2 1.2v2.3M3 11h12" },
+    { id: "employee", label: "Employee", short: "Employee", desc: "Policies only",
+      icon: "M9 8.2a2.6 2.6 0 1 0 0-5.2 2.6 2.6 0 0 0 0 5.2zM3.8 15c.5-2.6 2.6-4.3 5.2-4.3s4.7 1.7 5.2 4.3" }
+  ];
+  var lastDirectorView = null;   // return here when leaving the employee preview
+  var keepFocusOnSwitch = false; // arrow-key switching keeps focus on the radio, not the page heading
+  function setRole(id, announce) {
+    if (S.role === id) return;
+    if (id === "employee" && current && current.sec !== "policies") lastDirectorView = current.id;
+    S.role = id; save();
+    if (id === "director" && lastDirectorView && location.hash !== "#/" + lastDirectorView) { location.hash = "#/" + lastDirectorView; }
+    else route();
+    if (announce !== false) {
+      if (id === "employee") toast("Previewing the employee view — reports are hidden.", { label: "Undo", fn: function () { setRole("director", false); } });
+      else toast("Back to the Director / HR view.");
+    }
+  }
+  function renderViewAs() {
+    var wrap = $("#viewAs"); if (!wrap) return;
+    var idx = ROLES.findIndex(function (r) { return r.id === S.role; });
+    wrap.style.setProperty("--idx", String(Math.max(0, idx)));
+    if (wrap.childElementCount) {
+      wrap.querySelectorAll("[role=radio]").forEach(function (b, i) { var on = i === idx; b.setAttribute("aria-checked", String(on)); b.tabIndex = on ? 0 : -1; });
+      return;
+    }
+    wrap.appendChild(h("span", { class: "va-thumb", "aria-hidden": "true" }));
+    ROLES.forEach(function (r, i) {
+      var ico = sv("svg", { width: "16", height: "16", viewBox: "0 0 18 18", "aria-hidden": "true" }, sv("path", { d: r.icon, fill: "none", stroke: "currentColor", "stroke-width": "1.5", "stroke-linecap": "round", "stroke-linejoin": "round" }));
+      var b = h("button", { type: "button", role: "radio", "aria-checked": String(i === idx), tabindex: i === idx ? "0" : "-1", title: r.label + " — " + r.desc },
+        ico, h("span", { class: "va-txt" }, h("b", { text: r.short }), h("small", { text: r.desc })));
+      b.addEventListener("click", function () { setRole(r.id); });
+      b.addEventListener("keydown", function (e) {
+        if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].indexOf(e.key) < 0) return;
+        e.preventDefault();
+        var next = ROLES[(i + (e.key === "ArrowLeft" || e.key === "ArrowUp" ? ROLES.length - 1 : 1)) % ROLES.length];
+        keepFocusOnSwitch = true;
+        setRole(next.id);
+      });
+      wrap.appendChild(b);
+    });
   }
 
   function route() {
@@ -1180,14 +1295,12 @@
     document.body.classList.remove("rail-open");
     renderPage(v);
     window.scrollTo(0, 0);
+    if (keepFocusOnSwitch) { keepFocusOnSwitch = false; var r = document.querySelector('#viewAs [aria-checked="true"]'); if (r) r.focus(); return; }
     var h1 = document.querySelector(".page-head h1"); if (h1) { h1.setAttribute("tabindex", "-1"); h1.focus({ preventScroll: true }); }
   }
 
   /* ----- boot ----- */
   function boot() {
-    var role = $("#roleSelect");
-    role.value = S.role;
-    role.addEventListener("change", function () { S.role = role.value; save(); route(); });
     $("#themeBtn").addEventListener("click", function () {
       var root = document.documentElement, cur = root.getAttribute("data-theme");
       var dark = cur ? cur === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
