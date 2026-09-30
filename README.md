@@ -130,7 +130,8 @@ the websites project use). SQL Server is also supported.
    ```
    Set the variables in Railway (service → Variables → Raw Editor): `NODE_ENV=production`, a **new**
    `HR_JWT_SECRET`, `HR_ALLOWED_ORIGINS=https://rituchopra07.github.io` and the database settings from step 3.
-   Pick the Singapore region (nearest to Supabase Mumbai). In production the employee CRUD prototype is off.
+   Pick the Singapore region (nearest to Supabase Mumbai). With the service connected to the GitHub repo, pushes to
+   `main` that touch `server/`, `tools/manual/trackers/` or `railway.json` redeploy automatically; portal-only pushes don't. In production the employee CRUD prototype is off.
    Then set `trackerApi` in `design/assets/config.js` to `https://<host>/api`.
 6. Optional: set `tracker_api` in `tools/sources.json` so the exporter publishes % straight from the database.
 
