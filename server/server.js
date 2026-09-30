@@ -1,3 +1,7 @@
+// Local settings from server/.env (git-ignored). On a host, set real environment variables instead;
+// those take precedence over the file.
+try { process.loadEnvFile(require("path").join(__dirname, ".env")); } catch (e) { if (e.code !== "ENOENT") throw e; }
+
 const express = require("express");
 const cors = require("cors");
 const employeesRouter = require("./routes/employees");

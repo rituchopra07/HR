@@ -110,16 +110,7 @@ function mssqlStore() {
 
 /* ---------- PostgreSQL store (Supabase / Railway / RDS / self-hosted) ---------- */
 function postgresStore() {
-  const { Pool } = require("pg");
-  const url = process.env.HR_DATABASE_URL;
-  if (!url) throw new Error("HR_DATABASE_URL must be set for HR_TRACKER_STORE=postgres");
-  const pool = new Pool({
-    connectionString: url,
-    // hosted Postgres (Supabase, Railway, RDS) requires TLS; HR_DB_SSL=false only for a local database
-    ssl: process.env.HR_DB_SSL === "false" ? false : { rejectUnauthorized: process.env.HR_DB_SSL_STRICT !== "false" },
-    max: Number(process.env.HR_DB_POOL_MAX || 5),
-    idleTimeoutMillis: 30000,
-  });
+  const pool = require("./pg").getPool();
   const parse = (row) => {
     const doc = row.doc;
     doc.meta = { ...(doc.meta || {}), version: row.version, updatedAt: new Date(row.updated_at).toISOString(), updatedBy: row.updated_by };

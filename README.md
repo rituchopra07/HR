@@ -102,16 +102,22 @@ the websites project use). SQL Server is also supported.
 
 1. Create a Postgres database. Recommended: **Supabase, Mumbai region** (managed Postgres with backups; keeps data
    in India). Railway (where the Nucleus prototypes run), AWS RDS or a self-hosted Postgres work the same way.
-2. Run `server/sql/postgres/001_hr_trackers.sql` as the database owner (Supabase: SQL editor). It creates the two
-   tables, a least-privilege `hrportal_app` login (set its password in the script first) and row-level security
-   so Supabase's public REST API can't read the data.
+2. Run `server/sql/postgres/001_hr_trackers.sql` as the database owner (Supabase: SQL editor). It creates the
+   tracker tables, a least-privilege `hrportal_app` login (set its password in the script first, then remove it
+   from the saved query) and row-level security so Supabase's public REST API can't read the data.
+   Then run `server/sql/postgres/002_hr_users.sql` (sign-in users; no passwords in it).
 3. Configure `server/.env` from `server/.env.example` — `HR_JWT_SECRET`, `HR_ALLOWED_ORIGINS`,
-   `HR_TRACKER_STORE=postgres` and `HR_DATABASE_URL` (the `hrportal_app` connection string).
-4. Add HR users (password is prompted and stored only as a bcrypt hash in git-ignored `server/data/hr-users.json`):
+   `HR_TRACKER_STORE=postgres`, `HR_DATABASE_URL` (Supabase → Connect → **Session pooler**, user
+   `hrportal_app.<project-ref>`) and `HR_DB_SSL_CA` (Supabase's CA certificate, `server/certs/supabase-ca.crt`).
+   Check it with `node scripts/check-db.js`.
+4. Add HR users. Passwords are prompted and stored only as bcrypt hashes, in the database's `hr_users` table
+   (or git-ignored `server/data/hr-users.json` without a database):
    ```bash
    cd server && npm install
    node scripts/add-user.js ritu.chopra@fountainheadschools.org "Ritu Chopra" admin
+   node scripts/add-user.js --list                 # --disable <email> / --enable <email>; --import moves hr-users.json in
    ```
+   Disabling someone stops their open session within a minute. People are disabled, never deleted.
 5. Deploy the server over **HTTPS** (e.g. a Railway service), then set `trackerApi` in `design/assets/config.js`
    to `https://<host>/api`.
 6. Optional: set `tracker_api` in `tools/sources.json` so the exporter publishes % straight from the database.
