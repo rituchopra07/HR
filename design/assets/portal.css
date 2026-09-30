@@ -534,9 +534,10 @@ details.policy[open] > summary{ border-bottom:1px solid var(--line); }
   position:relative; isolation:isolate;
   transition:transform .35s cubic-bezier(.2,.7,.2,1), box-shadow .35s ease, border-color .35s ease;
 }
-.card::before, .tile::before, .ccard::before, details.policy::before{
+/* Spotlight only on small tiles — on big reading cards a glow reads as haze over the charts */
+.tile::before, .ccard::before{
   content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none; z-index:-1;
-  background:radial-gradient(420px circle at var(--mx, 50%) var(--my, 0%), var(--accent-wash), transparent 42%);
+  background:radial-gradient(220px circle at var(--mx, 50%) var(--my, 0%), color-mix(in srgb, var(--accent) 7%, transparent), transparent 70%);
   opacity:0; transition:opacity .35s ease;
 }
 .tile::after{
@@ -544,7 +545,7 @@ details.policy[open] > summary{ border-bottom:1px solid var(--line); }
   background:linear-gradient(90deg, transparent, var(--accent), transparent); transform:scaleX(0); transition:transform .45s cubic-bezier(.2,.7,.2,1);
 }
 .card:hover, .tile:hover, .ccard:hover{ transform:translateY(-2px); box-shadow:var(--shadow-pop); border-color:var(--line-2); }
-.card:hover::before, .tile:hover::before, .ccard:hover::before, details.policy:hover::before{ opacity:1; }
+.tile:hover::before, .ccard:hover::before{ opacity:1; }
 .tile:hover::after{ transform:scaleX(1); }
 /* big cards lift less — they're reading surfaces, not buttons */
 .card:hover{ transform:translateY(-1px); }
@@ -582,14 +583,15 @@ table.heat td.cell:hover{ transform:scale(1.06); box-shadow:0 0 0 2px var(--surf
 @keyframes growY{ from{ transform:scaleY(0); } to{ transform:scaleY(1); } }
 @keyframes fadeCell{ from{ opacity:0; } to{ opacity:1; } }
 
-/* Focus + context: hovering one mark dims its neighbours */
-.bars .bar, .stack .stack-row, .legend .it{ transition:opacity .2s ease; }
-.bars:hover .bar:not(:hover), .stack:hover .stack-row:not(:hover){ opacity:.45; }
-svg.chart.hovering .col:not(.on){ opacity:.35; }
+/* Focus + context: only when a specific mark is hovered, gently recede the OTHER marks.
+   Labels and values never fade — text stays fully readable. */
+.bar .trk, .stack-row .segs, svg.chart .col{ transition:opacity .2s ease; }
+.bars:has(.fill:hover) .bar:not(:has(.fill:hover)) .trk{ opacity:.55; }
+.stack:has(.segs i:hover) .stack-row:not(:has(.segs i:hover)) .segs{ opacity:.55; }
+svg.chart.hovering .col:not(.on){ opacity:.6; }
+.bar:has(.fill:hover) .nm, .stack-row:has(.segs i:hover) .nm{ color:var(--ink); }   /* hovered row's label steps up */
 .segs i{ transition:filter .15s ease; }
-.segs:hover i:not(:hover){ filter:saturate(.55) opacity(.7); }
-.segs i:hover{ filter:brightness(1.12); }
-.bar .fill:hover{ filter:brightness(1.12); }
+.segs i:hover, .bar .fill:hover{ filter:brightness(1.1) saturate(1.1); }
 
 /* Filter chips & popover rows */
 .fchip{ transition:border-color .2s, box-shadow .2s, transform .2s cubic-bezier(.34,1.4,.5,1), background .2s; }
