@@ -45,8 +45,9 @@ HR/
 ├── client/                        # React (Vite) frontend (prototype)
 └── server/                        # Express API: employees (prototype) + tracker API (shared compliance data)
     ├── routes/trackers.js, routes/auth.js
-    ├── lib/                       # auth (bcrypt + JWT), validation, file / SQL Server store
-    ├── sql/001_hr_trackers.sql    # database + least-privilege login + audit history table
+    ├── lib/                       # auth (bcrypt + JWT), validation, file / Postgres / SQL Server store
+    ├── sql/postgres/001_hr_trackers.sql  # Postgres: tables, least-privilege login, row-level security
+    ├── sql/001_hr_trackers.sql    # SQL Server alternative
     └── scripts/add-user.js        # add an HR user
 ```
 
@@ -91,17 +92,26 @@ The editors are hidden in the Employee view.
 
 #### Tracker API — shared database (`server/`)
 
-1. Create the database and a least-privilege login: `server/sql/001_hr_trackers.sql` (run by a DBA; set the password
-   in the script first).
-2. Configure `server/.env` from `server/.env.example` — `HR_JWT_SECRET`, `HR_ALLOWED_ORIGINS`,
-   `HR_TRACKER_STORE=mssql` and the `HR_DB_*` settings.
-3. Add HR users (password is prompted and stored only as a bcrypt hash in git-ignored `server/data/hr-users.json`):
+The API stores tracker documents in **PostgreSQL** (recommended — the same database the Nucleus prototypes and
+the websites project use). SQL Server is also supported.
+
+1. Create a Postgres database. Recommended: **Supabase, Mumbai region** (managed Postgres with backups; keeps data
+   in India). Railway (where the Nucleus prototypes run), AWS RDS or a self-hosted Postgres work the same way.
+2. Run `server/sql/postgres/001_hr_trackers.sql` as the database owner (Supabase: SQL editor). It creates the two
+   tables, a least-privilege `hrportal_app` login (set its password in the script first) and row-level security
+   so Supabase's public REST API can't read the data.
+3. Configure `server/.env` from `server/.env.example` — `HR_JWT_SECRET`, `HR_ALLOWED_ORIGINS`,
+   `HR_TRACKER_STORE=postgres` and `HR_DATABASE_URL` (the `hrportal_app` connection string).
+4. Add HR users (password is prompted and stored only as a bcrypt hash in git-ignored `server/data/hr-users.json`):
    ```bash
    cd server && npm install
    node scripts/add-user.js ritu.chopra@fountainheadschools.org "Ritu Chopra" admin
    ```
-4. Deploy the server over **HTTPS**, then set `trackerApi` in `design/assets/config.js` to `https://<host>/api`.
-5. Optional: set `tracker_api` in `tools/sources.json` so the exporter publishes % straight from the database.
+5. Deploy the server over **HTTPS** (e.g. a Railway service), then set `trackerApi` in `design/assets/config.js`
+   to `https://<host>/api`.
+6. Optional: set `tracker_api` in `tools/sources.json` so the exporter publishes % straight from the database.
+
+SQL Server instead: run `server/sql/001_hr_trackers.sql` and set `HR_TRACKER_STORE=mssql` with the `HR_DB_*` settings.
 
 Endpoints: `POST /api/auth/login`, `GET /api/trackers/:tracker`, `GET|PUT /api/trackers/:tracker/:entity`,
 `GET /api/trackers/:tracker/backup`. Every tracker route needs a signed-in HR user. Hosting needs approval.

@@ -1161,6 +1161,16 @@
       h("span", { class: "it", style: { color: "var(--ink-3)" } }, t.periods ? "Pick a status in each month's dropdown" : "Pick the current status of each check"));
 
     var periods = t.periods || null;
+    // phones: one month column at a time (picker below) instead of a 12-column grid to scroll sideways
+    var monthPicker = null;
+    if (periods && NARROW.matches) {
+      ED.month = ED.month || {};
+      if (periods.indexOf(ED.month[meta.id]) < 0) ED.month[meta.id] = defaultMonth(t);
+      monthPicker = h("label", { class: "tb-field month-pick" }, h("span", { text: "Month" }),
+        h("select", { class: "fsel", "aria-label": "Month to update", onchange: function (ev) { ED.month[meta.id] = ev.target.value; rerender(); } },
+          periods.map(function (p) { return h("option", { value: p, selected: p === ED.month[meta.id] }, p); })));
+      periods = [ED.month[meta.id]];
+    }
     var acc = t.categories.map(function (c, ci) {
       var badge = h("span", { class: "cat-badge" });
       var paint = function () {
@@ -1193,7 +1203,22 @@
           h("tbody", null, rows))),
         h("label", { class: "remarks" }, h("span", { text: "Remarks / corrective action (" + c.title + ")" }), remarks));
     });
-    return [toolbar, legend, h("div", { class: "trk-accs" }, acc)];
+    return [toolbar, monthPicker ? h("div", { class: "month-bar" }, monthPicker) : null, legend, h("div", { class: "trk-accs" }, acc)];
+  }
+  var NARROW = matchMedia("(max-width: 640px)");
+  (NARROW.addEventListener ? NARROW.addEventListener("change", function () { if (current && current.sec === "compliance") rerender(); }) : null);
+  /* latest month that has any entry; otherwise the current calendar month if the tracker has it, else its first period */
+  function defaultMonth(t) {
+    var ps = t.periods, id = Object.keys(TRK).filter(function (k) { return TRK[k] === t; })[0];
+    var docs = DOCS[id] || {};
+    var order = t.latest === "first" ? ps : ps.slice().reverse();
+    for (var i = 0; i < order.length; i++) {
+      var p = order[i];
+      if (Object.keys(docs).some(function (e) { return Object.keys(docs[e].items).some(function (k) { var v = docs[e].items[k]; return v && typeof v === "object" && v[p]; }); })) return p;
+    }
+    var now = MON[new Date().getMonth()];
+    for (var j = 0; j < ps.length; j++) if (ps[j].slice(0, 3).toLowerCase() === now.toLowerCase()) return ps[j];
+    return ps[0];
   }
 
   function downloadBackup(meta, t) {
@@ -1354,7 +1379,7 @@
             table: function () { return { cols: [{ label: "Type" }, { label: "Tickets", num: true }, { label: "Avg days", num: true }, { label: "Within due", num: true }, { label: "Open", num: true }], rows: ts.map(function (t) { return { cells: [t.type, fmt(t.n), fmt1(t.avgTat), pctTxt(t.sla), fmt(t.open)] }; }) }; } }),
           card({ title: "Due-date performance", hint: "Share of tickets raised in the period", body: function () {
             var tot = sum(rows); return [h("div", { class: "split-bar", style: { height: "16px" } }, SLA_ORDER.map(function (s) { var v = sum(rows.filter(function (r) { return r.sla === s[0]; })); return v ? tip(h("i", { style: { width: v / tot * 100 + "%", background: "var(--" + s[1] + ")" } }), function () { return { head: s[0], rows: [{ value: fmt(v) + " · " + pctTxt(pct(v, tot)) }] }; }) : null; })),
-              h("div", { class: "attn", style: { "margin-top": "8px" } }, SLA_ORDER.map(function (s) { var v = sum(rows.filter(function (r) { return r.sla === s[0]; })); return h("div", { class: "attn-row", style: { "grid-template-columns": "1fr auto auto" } }, h("div", null, pill(s[1], s[0])), h("b", { class: "tnum", text: fmt(v) }), h("span", { class: "tnum", style: { color: "var(--ink-3)", "min-width": "52px", "text-align": "right" }, text: pctTxt(pct(v, tot)) })); }))];
+              h("div", { class: "attn", style: { "margin-top": "8px" } }, SLA_ORDER.map(function (s) { var v = sum(rows.filter(function (r) { return r.sla === s[0]; })); return h("div", { class: "attn-row sla-row" }, h("div", { class: "sla-name" }, pill(s[1], s[0])), h("b", { class: "tnum", text: fmt(v) }), h("span", { class: "tnum sla-pct", text: pctTxt(pct(v, tot)) })); }))];
           } })),
         card({ title: "Ticket type × section", hint: "Bifurcation of tickets raised in the period by the raiser's section", body: heat(top.map(function (t) { return { key: t.type, label: t.type }; }), groupsIn.map(function (g) { return { key: g, label: g }; }),
           function (t, g) { var v = sum(rows.filter(function (r) { return r.type === t && r.g === g; })); return v; }, { rowTotal: true, colTotal: true, corner: "Ticket type", unit: "tickets" }) }),
@@ -1687,11 +1712,42 @@
     if (!v || !allowed(v)) v = S.role === "employee" ? viewById("policies/library") : viewById("overview/snapshot");
     if ("#/" + v.id !== location.hash) { history.replaceState(null, "", "#/" + v.id); }
     current = v; closePop(); hideTip();
-    document.body.classList.remove("rail-open");
+    closeDrawer();
     renderPage(v);
     window.scrollTo(0, 0);
     if (keepFocusOnSwitch) { keepFocusOnSwitch = false; var r = document.querySelector('#viewAs [aria-checked="true"]'); if (r) r.focus(); return; }
     var h1 = document.querySelector(".page-head h1"); if (h1) { h1.setAttribute("tabindex", "-1"); h1.focus({ preventScroll: true }); }
+  }
+
+  /* ----- hamburger: drawer on phones/tablets, collapsible sidebar on desktop ----- */
+  var MOBILE = matchMedia("(max-width: 900px)");
+  function syncMenu() {
+    var btn = $("#menuBtn"), b = document.body;
+    var open = MOBILE.matches ? b.classList.contains("rail-open") : !b.classList.contains("rail-collapsed");
+    btn.setAttribute("aria-expanded", String(open));
+    btn.setAttribute("aria-label", open ? "Hide navigation" : "Show navigation");
+    btn.title = open ? "Hide navigation" : "Show navigation";
+    var rail = $("#rail");
+    if (MOBILE.matches) { if (open) rail.removeAttribute("inert"); else rail.setAttribute("inert", ""); } else rail.removeAttribute("inert");
+  }
+  function closeDrawer() { if (document.body.classList.contains("rail-open")) { document.body.classList.remove("rail-open"); syncMenu(); } }
+  function wireMenu() {
+    if (store("hr.portal.railCollapsed")) document.body.classList.add("rail-collapsed");
+    $("#menuBtn").addEventListener("click", function () {
+      if (MOBILE.matches) {
+        document.body.classList.toggle("rail-open");
+        syncMenu();   // drop `inert` first, otherwise focus can't move into the drawer
+        if (document.body.classList.contains("rail-open")) { var f = $('#rail [aria-current="page"]') || $("#rail a, #rail button"); if (f) f.focus({ preventScroll: true }); }
+      } else {
+        var c = document.body.classList.toggle("rail-collapsed");
+        store("hr.portal.railCollapsed", c);
+        syncMenu();
+      }
+    });
+    $("#scrim").addEventListener("click", closeDrawer);
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape" && MOBILE.matches) { var was = document.body.classList.contains("rail-open"); closeDrawer(); if (was) $("#menuBtn").focus(); } });
+    (MOBILE.addEventListener ? MOBILE.addEventListener("change", function () { document.body.classList.remove("rail-open"); syncMenu(); }) : MOBILE.addListener(syncMenu));
+    syncMenu();
   }
 
   /* ----- boot ----- */
@@ -1701,8 +1757,7 @@
       var dark = cur ? cur === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
       root.setAttribute("data-theme", dark ? "light" : "dark"); store("hr.portal.theme", dark ? "light" : "dark");
     });
-    $("#menuBtn").addEventListener("click", function () { document.body.classList.toggle("rail-open"); });
-    $("#scrim").addEventListener("click", function () { document.body.classList.remove("rail-open"); });
+    wireMenu();
     var fresh = $("#fresh");
     if (RAW) {
       var d = RAW.meta.sources.map(function (s) { return s.as_of; }).sort();

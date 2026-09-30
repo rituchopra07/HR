@@ -100,8 +100,22 @@ button{ font:inherit; color:inherit; }
   display:flex; align-items:center; gap:18px; padding:0 20px 0 16px;
   border-bottom:1px solid rgba(255,255,255,.06);
 }
-.menu-btn{ display:none; all:unset; cursor:pointer; width:36px; height:36px; border-radius:8px; align-items:center; justify-content:center; color:var(--band-ink); }
+/* hamburger: collapses the sidebar on desktop, opens the drawer on phones/tablets.
+   (all:unset must come first — it resets every property declared before it) */
+.menu-btn{ all:unset; box-sizing:border-box; cursor:pointer; width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center; color:var(--band-ink); flex:none; transition:background .2s; }
 .menu-btn:hover{ background:var(--band-2); }
+.menu-btn:focus-visible{ outline:2px solid #D3A24B; outline-offset:2px; }
+.menu-btn svg path{ transition:transform .3s cubic-bezier(.2,.7,.2,1), opacity .2s; transform-origin:9px 9px; }
+.menu-btn[aria-expanded="true"] .mb-1{ transform:translateY(4.5px) rotate(45deg); }
+.menu-btn[aria-expanded="true"] .mb-2{ opacity:0; }
+.menu-btn[aria-expanded="true"] .mb-3{ transform:translateY(-4.5px) rotate(-45deg); }
+@media (min-width: 901px){
+  .menu-btn[aria-expanded] .mb-1, .menu-btn[aria-expanded] .mb-2, .menu-btn[aria-expanded] .mb-3{ transform:none; opacity:1; }   /* desktop: stays a hamburger */
+  .shell{ transition:grid-template-columns .32s cubic-bezier(.2,.7,.2,1); }
+  body.rail-collapsed .shell{ grid-template-columns:0 minmax(0,1fr); }
+  .rail{ transition:opacity .2s ease, padding .32s cubic-bezier(.2,.7,.2,1); }
+  body.rail-collapsed .rail{ opacity:0; visibility:hidden; padding-left:0; padding-right:0; border-right-width:0; overflow:hidden; }
+}
 .crest{ display:flex; align-items:center; gap:11px; flex:none; text-decoration:none; }
 .crest-mark{
   width:34px; height:34px; border-radius:9px; flex:none; display:grid; place-items:center;
@@ -769,4 +783,29 @@ body.is-refresh .bar .fill, body.is-refresh .segs, body.is-refresh svg.chart .co
   .topbar, .rail, .filterbar, .card-tools{ display:none !important; }
   .shell{ display:block; } body{ background:#fff; }
   .card, .tile{ box-shadow:none; break-inside:avoid; }
+}
+
+/* HR tickets · due-date rows: let the label column shrink so counts never spill out of narrow cards */
+.attn-row.sla-row{ grid-template-columns:minmax(0,1fr) auto auto; align-items:center; }
+.sla-name{ min-width:0; }
+.sla-name .pill{ white-space:normal; }
+.sla-pct{ color:var(--ink-3); min-width:44px; text-align:right; }
+
+/* phones: tracker editor shows one month at a time */
+.month-bar{ display:flex; align-items:flex-end; gap:12px; padding:12px 14px; background:var(--accent-wash); border:1px solid color-mix(in srgb, var(--accent) 30%, transparent); border-radius:var(--radius); }
+.month-bar .fsel{ min-width:160px; }
+@media (max-width: 640px){
+  .trk-toolbar{ flex-direction:column; align-items:stretch; }
+  .trk-toolbar .fsel, .trk-toolbar .finput{ width:100%; min-width:0; }
+  .tb-actions{ margin-left:0; }
+  .tb-actions .btn{ flex:1; }
+  table.trk-grid th:first-child{ min-width:0; }
+  table.trk-grid td.item-label{ padding-left:12px; }
+  table.trk-grid td.st-cell{ width:76px; }
+  select.st{ width:70px; min-height:40px; padding:8px 4px; font-size:13px; }   /* ~40px touch target */
+  .trk-head{ flex-direction:column; align-items:stretch; }
+  .seg{ align-self:stretch; } .seg button{ flex:1; text-align:center; }
+  .stamps{ grid-template-columns:repeat(2, minmax(0,1fr)); }
+  details.trk-acc > summary{ padding:12px; }
+  .remarks{ padding:10px 12px 14px; }
 }
