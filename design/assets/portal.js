@@ -1028,7 +1028,7 @@
   }
 
   /* ---------- page chrome: storage mode + Overview / Update toggle ---------- */
-  var ED = { view: {}, entity: {} };
+  var ED = { view: {}, entity: {}, focus: null };   // focus: { tid, ci, ii } set by global search
   function modeBar(tid) {
     var st = TStore.kind === "remote"
       ? (RemoteStore.signedIn() ? [h("i", { class: "dot live" }), "Shared database · signed in as ", h("b", { text: (RemoteStore.user() || {}).name || "HR" }), h("button", { type: "button", class: "linkbtn", onclick: function () { RemoteStore.signOut(); rerender(); } }, "Sign out")]
@@ -1191,12 +1191,14 @@
           });
           return h("td", { class: "st-cell" }, s);
         });
-        return h("tr", null, h("td", { class: "item-label", text: label }), cells);
+        var hit = ED.focus && ED.focus.tid === meta.id && ED.focus.ci === ci && ED.focus.ii === ii;
+        return h("tr", { class: hit ? "search-hit" : null, "data-item": key }, h("td", { class: "item-label", text: label }), cells);
       });
       var remarks = h("textarea", { rows: "2", placeholder: "Notes for this category…", "aria-label": "Remarks / corrective action — " + c.title });
       remarks.value = doc.remarks[ci] || "";
       remarks.addEventListener("input", function () { doc.remarks[ci] = remarks.value; scheduleSave(); });
-      return h("details", { class: "trk-acc", open: ci === 0 },
+      var openCi = ED.focus && ED.focus.tid === meta.id ? ED.focus.ci : 0;
+      return h("details", { class: "trk-acc", open: ci === openCi, "data-cat": String(ci) },
         h("summary", null, h("span", { class: "pico", text: String(ci + 1) }), h("span", { class: "pt" }, h("b", { text: c.title }), h("span", { text: c.items.length + " check" + (c.items.length === 1 ? "" : "s") })), badge, h("span", { class: "chev", text: "›" })),
         h("div", { class: "tscroll" }, h("table", { class: "trk-grid" },
           h("thead", null, h("tr", null, h("th", { text: "Checklist item" }), (periods || ["Status"]).map(function (p) { return h("th", { text: p }); }))),
@@ -1630,6 +1632,9 @@
     document.body.classList.add("is-refresh");          // filter change: no entrance stagger, quick chart re-grow
     renderPage(current, true);
     window.scrollTo(0, y);
+    // data landed mid-way through a search jump: the old scroll was cut short, so land on the target again
+    var jt = lastJump && Date.now() - lastJump.at < 4000 && document.querySelector(lastJump.sel);
+    if (jt) { var jd = jt.closest("details"); if (jd) jd.open = true; jt.scrollIntoView({ block: "center" }); }
     setTimeout(function () { document.body.classList.remove("is-refresh"); }, 400);
   }
   function renderPage(v, isRefresh) {
@@ -1711,13 +1716,246 @@
     var v = viewById(hash) || (function () { var s = sectionViews(hash); return s.length ? s[0] : null; })();
     if (!v || !allowed(v)) v = S.role === "employee" ? viewById("policies/library") : viewById("overview/snapshot");
     if ("#/" + v.id !== location.hash) { history.replaceState(null, "", "#/" + v.id); }
+    if (ED.focus && ED.focus.route !== v.id) ED.focus = null;   // a search target only applies to its own page
     current = v; closePop(); hideTip();
     closeDrawer();
     renderPage(v);
     window.scrollTo(0, 0);
+    if (pendingFocus) {                 // arrived from global search: open + scroll to the exact thing
+      var target = document.querySelector(pendingFocus); lastJump = { sel: pendingFocus, at: Date.now() }; pendingFocus = null;
+      if (target) {
+        if (target.tagName === "DETAILS") target.open = true;
+        var d = target.closest("details"); if (d) d.open = true;
+        requestAnimationFrame(function () { target.scrollIntoView({ block: "center", behavior: REDUCED.matches ? "auto" : "smooth" }); target.classList.add("flash"); setTimeout(function () { target.classList.remove("flash"); }, 1800); });
+        var h1f = document.querySelector(".page-head h1"); if (h1f) { h1f.setAttribute("tabindex", "-1"); }
+        return;
+      }
+    }
     if (keepFocusOnSwitch) { keepFocusOnSwitch = false; var r = document.querySelector('#viewAs [aria-checked="true"]'); if (r) r.focus(); return; }
     var h1 = document.querySelector(".page-head h1"); if (h1) { h1.setAttribute("tabindex", "-1"); h1.focus({ preventScroll: true }); }
   }
+
+  /* ----- global search (Ctrl K · /) ----------------------------------------------------------------
+     One index over reports, policies, compliance checks, filters, data terms and actions.
+     Every entry: { type, title, sub, terms, go(), employee }  — all text inserted with textContent. */
+  var SEARCH_TYPES = {
+    report: { label: "Reports", icon: "▦" }, policy: { label: "Policies & guidelines", icon: "§" },
+    check: { label: "Compliance checks", icon: "✓" }, filter: { label: "Filters", icon: "⧩" },
+    data: { label: "In the data", icon: "◎" }, action: { label: "Actions", icon: "↗" }
+  };
+  var SEARCH_ORDER = ["report", "filter", "policy", "check", "data", "action"];
+  var pendingFocus = null, lastJump = null;                                   // selector to scroll to once the page renders
+  function go(hash, focusSel) {
+    pendingFocus = focusSel || null;
+    if (location.hash === hash) route(); else location.hash = hash;
+  }
+  function norm(s) { return String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9%&+]+/g, " ").trim(); }
+  function applyFilter(fn, fallback) {
+    fn(); save();
+    var target = current && current.uses && fallback.uses(current.uses) ? "#/" + current.id : "#/" + fallback.route;
+    go(target); toast(fallback.msg);
+  }
+  var SEARCH_INDEX = null;
+  function plural(n, word) { return fmt(n) + " " + word + (n === 1 ? "" : "s"); }
+  function buildIndex() {
+    var idx = [], add = function (e) { e.hay = norm([e.title, e.sub, e.terms].join(" ")); e.titleN = norm(e.title); idx.push(e); };
+    var SYN = {
+      "overview/snapshot": "dashboard summary home kpi director overview attention",
+      "overview/headcount": "staff strength employees headcount monthly report jatin students ratio pspl bifurcation protego payroll entity programme",
+      "overview/demographics": "gen z genz millennials gen x boomers generation age tenure retirement succession",
+      "hiring/recruitment": "hiring applications candidates careers vacancy applicants interview rejected joined",
+      "hiring/joinees": "new joiners joinee induction onboarding intro mail",
+      "hiring/checklist": "onboarding checklist day one documents buddy",
+      "exit/attrition": "attrition churn turnover resignations leavers exits separation",
+      "exit/reasons": "why people leave resignation reasons controllable",
+      "exit/fnf": "full and final settlement f&f fnf dues",
+      "exit/interviews": "exit interview feedback",
+      "compliance/overview": "compliance scorecard c nc non compliant statutory",
+      "compliance/labour": "labour codes wages industrial relations social security osh statutory licences registers",
+      "compliance/posh": "posh sexual harassment internal committee ic icc",
+      "compliance/payroll-processing": "payroll processing checklist monthly salary tasks",
+      "compliance/payroll-kpi": "payroll kpi vsdb 28th queries statutory filing",
+      "compliance/statutory": "pf uan esi statutory provident fund",
+      "compliance/tickets": "tickets helpdesk queries tat turnaround sla overdue",
+      "policies/library": "policies guidelines handbook survival guide forms templates documents drive"
+    };
+    VIEWS.forEach(function (v) {
+      var sec = SECTIONS.filter(function (s) { return s.id === v.sec; })[0];
+      add({ type: "report", title: v.title, sub: sec.n + " · " + sec.title, terms: v.lede + " " + (SYN[v.id] || "") + (v.soon ? " planned" : ""), employee: v.sec === "policies", go: function () { go("#/" + v.id); } });
+    });
+    POLICIES.forEach(function (pc) {
+      add({ type: "policy", title: pc.t, sub: pc.d, terms: pc.docs.join(" "), employee: true, go: function () { go("#/policies/library", "#pol-" + pc.k); } });
+      pc.docs.forEach(function (d) { add({ type: "policy", title: d, sub: pc.t, terms: "document policy", employee: true, go: function () { go("#/policies/library", "#pol-" + pc.k); } }); });
+    });
+    TRK_ORDER.forEach(function (m) {
+      var t = TRK[m.id]; if (!t) return;
+      t.categories.forEach(function (c, ci) {
+        add({ type: "check", title: c.title, sub: t.title + " · category " + (ci + 1), terms: c.items.length + " checks", go: function () { ED.view[m.id] = "editor"; ED.focus = { tid: m.id, ci: ci, ii: -1, route: m.route }; go("#/" + m.route, '[data-cat="' + ci + '"]'); } });
+        c.items.forEach(function (it, ii) {
+          add({ type: "check", title: it, sub: t.title + " · " + c.title, terms: "", go: function () { ED.view[m.id] = "editor"; ED.focus = { tid: m.id, ci: ci, ii: ii, route: m.route }; go("#/" + m.route, '[data-item="' + ci + "-" + ii + '"]'); } });
+        });
+      });
+    });
+    CAMPUSES.forEach(function (c) {
+      add({ type: "filter", title: "Show " + cLabel(c.code) + " only", sub: c.name + " · " + c.place, terms: c.code + " campus entity", go: function () {
+        applyFilter(function () { S.campuses = new Set([c.code]); }, { uses: function (u) { return u.c; }, route: "overview/headcount", msg: "Showing " + c.code + " only" });
+      } });
+    });
+    EMPLOYERS.forEach(function (e) {
+      add({ type: "filter", title: "Payroll: " + e.short + " only", sub: e.name, terms: e.code + " payroll entity employer" + (e.code === "PSPL" ? " protego bifurcation" : ""), go: function () {
+        applyFilter(function () { S.employers = new Set([e.code]); }, { uses: function (u) { return u.e; }, route: "overview/headcount", msg: "Payroll entity: " + e.short });
+      } });
+    });
+    GROUPS.forEach(function (g) {
+      add({ type: "filter", title: "Section: " + g + " only", sub: "Filter every report to one section", terms: "group section", go: function () {
+        applyFilter(function () { S.groups = new Set([g]); }, { uses: function (u) { return u.g; }, route: "overview/headcount", msg: "Section: " + g });
+      } });
+    });
+    ["quick", "year", "half", "quarter", "month"].forEach(function (k) {
+      PRESETS[k].forEach(function (p) {
+        add({ type: "filter", title: "Date: " + p.label, sub: periodSpan(p), terms: k + " period date range", go: function () {
+          applyFilter(function () { S.period = p; }, { uses: function (u) { return u.period; }, route: "exit/attrition", msg: "Date: " + p.label });
+        } });
+      });
+    });
+    var uniq = function (rows, key) { var m = {}; rows.forEach(function (r) { var v = r[key]; if (v && !/^(Unspecified|Not specified|Other positions|Not recorded)$/.test(v)) m[v] = (m[v] || 0) + (r.n || 0); }); return Object.keys(m).sort(function (a, b) { return m[b] - m[a]; }).map(function (k) { return [k, m[k]]; }); };
+    if (DB) {
+      uniq(DB.tix, "type").forEach(function (x) { add({ type: "data", title: x[0], sub: "HR ticket type · " + plural(x[1], "ticket"), terms: "ticket issue", go: function () { go("#/compliance/tickets"); } }); });
+      uniq(DB.hc, "s").forEach(function (x) { add({ type: "data", title: x[0], sub: "Department / programme · " + fmt(x[1]) + " on roll", terms: "department programme staff headcount", go: function () { go("#/overview/headcount"); } }); });
+      uniq(DB.rec, "area").forEach(function (x) { add({ type: "data", title: x[0], sub: "Position applied for · " + plural(x[1], "application"), terms: "recruitment vacancy area of interest", go: function () { go("#/hiring/recruitment"); } }); });
+      uniq(DB.reasons, "reason").forEach(function (x) { add({ type: "data", title: x[0], sub: "Exit reason · " + plural(x[1], "exit"), terms: "attrition resignation", go: function () { go("#/exit/reasons"); } }); });
+    }
+    add({ type: "action", title: "Switch to Employee view", sub: "Preview what staff see", terms: "role view as", employee: false, go: function () { setRole("employee"); } });
+    add({ type: "action", title: "Switch to Director / HR view", sub: "All reports", terms: "role view as", employee: true, go: function () { setRole("director"); } });
+    add({ type: "action", title: "Toggle light / dark theme", sub: "Appearance", terms: "theme dark mode light mode", employee: true, go: function () { $("#themeBtn").click(); } });
+    add({ type: "action", title: "Reset all filters", sub: "All campuses, entities, sections · this academic year", terms: "clear filters", go: function () {
+      S.campuses = new Set(ALL_C); S.employers = new Set(ALL_E); S.groups = new Set(GROUPS); S.period = PRESETS.quick[0]; save(); rerender(); toast("Filters reset");
+    } });
+    return idx;
+  }
+
+  function searchScore(e, q, toks) {
+    for (var i = 0; i < toks.length; i++) if (e.hay.indexOf(toks[i]) < 0) return null;   // scores can be negative; null = no match
+    var s = 0;
+    if (e.titleN === q) s += 200; else if (e.titleN.indexOf(q) === 0) s += 120;
+    else if ((" " + e.titleN).indexOf(" " + q) >= 0) s += 80; else if (e.titleN.indexOf(q) >= 0) s += 50;
+    toks.forEach(function (t) { if ((" " + e.titleN).indexOf(" " + t) >= 0) s += 15; else if (e.titleN.indexOf(t) >= 0) s += 6; });
+    s += { report: 30, filter: 12, policy: 10, check: -60, data: -20, action: 2 }[e.type];   // checks and data terms are the long tail: a report or policy wins a tie
+    return s - e.titleN.length / 40;   // prefer shorter, tighter titles on ties
+  }
+  function highlight(text, toks) {
+    var out = [], low = norm(text), raw = String(text), pos = 0;
+    // map normalised positions back to the raw string is hard in general; highlight on the raw string case-insensitively
+    var re = toks.filter(Boolean).map(function (t) { return t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); });
+    if (!re.length || !low) return [raw];
+    var rx = new RegExp("(" + re.join("|") + ")", "ig"), m;
+    while ((m = rx.exec(raw))) { if (m.index > pos) out.push(raw.slice(pos, m.index)); out.push(h("mark", { text: m[0] })); pos = m.index + m[0].length; if (!m[0].length) rx.lastIndex++; }
+    if (pos < raw.length) out.push(raw.slice(pos));
+    return out;
+  }
+
+  var SX = null, sxSel = 0, sxItems = [], lastFocus = null;
+  function recentSearches() { return store("hr.portal.recent") || []; }
+  function openSearch(initial) {
+    if (!SEARCH_INDEX) SEARCH_INDEX = buildIndex();
+    if (SX) { SX.input.focus(); return; }
+    lastFocus = document.activeElement;
+    var input = h("input", { class: "sx-input", type: "search", placeholder: S.role === "employee" ? "Search policies and guidelines…" : "Search reports, policies, checklist items, campuses…",
+      "aria-label": "Search the portal", role: "combobox", "aria-expanded": "true", "aria-controls": "sxList", "aria-autocomplete": "list", autocomplete: "off", spellcheck: "false" });
+    var list = h("div", { class: "sx-list", id: "sxList", role: "listbox", "aria-label": "Results" });
+    var count = h("span", { class: "sx-count", "aria-live": "polite" });
+    var panel = h("div", { class: "sx-panel", role: "dialog", "aria-modal": "true", "aria-label": "Search" },
+      h("div", { class: "sx-bar" }, h("span", { class: "sx-icon", "aria-hidden": "true" }, searchIcon()), input, h("kbd", { class: "sx-esc", text: "Esc" })),
+      list,
+      h("div", { class: "sx-foot" }, h("span", null, h("kbd", { text: "↑" }), h("kbd", { text: "↓" }), " move"), h("span", null, h("kbd", { text: "↵" }), " open"), h("span", null, h("kbd", { text: "Esc" }), " close"), count));
+    var overlay = h("div", { class: "sx", onclick: function (e) { if (e.target === overlay) closeSearch(); } }, panel);
+    document.body.appendChild(overlay); document.body.classList.add("sx-open");
+    SX = { overlay: overlay, input: input, list: list, count: count };
+    input.addEventListener("input", function () { sxSel = 0; renderResults(); });
+    input.addEventListener("keydown", function (e) {
+      if (e.key === "ArrowDown") { e.preventDefault(); moveSel(1); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); moveSel(-1); }
+      else if (e.key === "Enter") { e.preventDefault(); if (sxItems[sxSel]) pick(sxItems[sxSel]); }
+      else if (e.key === "Escape") { e.preventDefault(); closeSearch(); }
+      else if (e.key === "Tab") { e.preventDefault(); moveSel(e.shiftKey ? -1 : 1); }
+    });
+    input.value = initial || ""; renderResults();
+    requestAnimationFrame(function () { overlay.classList.add("on"); }); setTimeout(function () { overlay.classList.add("on"); }, 40);
+    input.focus();
+  }
+  function closeSearch() {
+    if (!SX) return;
+    var o = SX.overlay; SX = null; document.body.classList.remove("sx-open");
+    o.classList.remove("on"); setTimeout(function () { o.remove(); }, 180);
+    if (lastFocus && lastFocus.focus && document.contains(lastFocus)) lastFocus.focus({ preventScroll: true });
+  }
+  function moveSel(d) {
+    if (!sxItems.length) return;
+    sxSel = (sxSel + d + sxItems.length) % sxItems.length;
+    SX.list.querySelectorAll(".sx-item").forEach(function (el, i) { el.setAttribute("aria-selected", String(i === sxSel)); if (i === sxSel) { el.scrollIntoView({ block: "nearest" }); SX.input.setAttribute("aria-activedescendant", el.id); } });
+  }
+  function pick(e) {
+    var q = SX.input.value.trim();
+    if (q) store("hr.portal.recent", [q].concat(recentSearches().filter(function (r) { return r !== q; })).slice(0, 6));
+    closeSearch(); e.go();
+  }
+  function renderResults() {
+    var q = norm(SX.input.value), toks = q.split(" ").filter(Boolean), list = SX.list;
+    list.textContent = ""; sxItems = [];
+    var pool = SEARCH_INDEX.filter(function (e) { return S.role !== "employee" || e.employee; });
+    var groups = {};
+    if (!q) {
+      var rec = recentSearches();
+      if (rec.length) {
+        list.appendChild(h("div", { class: "sx-group", text: "Recent searches" }));
+        rec.forEach(function (r) {
+          var item = { title: r, sub: "Search again", type: "recent", go: null };
+          item.go = function () { openSearch(r); };
+          sxItems.push(item);
+        });
+      }
+      pool.filter(function (e) { return e.type === "report" && !/planned/.test(e.terms); }).slice(0, 8).forEach(function (e) { (groups.report = groups.report || []).push(e); });
+    } else {
+      pool.forEach(function (e) { var sc = searchScore(e, q, toks); if (sc !== null) { e._s = sc; (groups[e.type] = groups[e.type] || []).push(e); } });
+      Object.keys(groups).forEach(function (k) { groups[k].sort(function (a, b) { return b._s - a._s; }); });
+    }
+    var total = 0;
+    // recent searches first (only when the box is empty)
+    sxItems.forEach(function (it, i) { list.appendChild(resultRow(it, i, [])); });
+    var order = SEARCH_ORDER.slice();
+    if (q) order.sort(function (a, b) { return (groups[b] ? groups[b][0]._s : -1e9) - (groups[a] ? groups[a][0]._s : -1e9); });   // best group first
+    order.forEach(function (k) {
+      var g = groups[k]; if (!g || !g.length) return;
+      total += g.length;
+      var shown = g.slice(0, k === "check" || k === "data" ? 6 : 8);
+      list.appendChild(h("div", { class: "sx-group" }, SEARCH_TYPES[k].label, g.length > shown.length ? h("span", { text: " · top " + shown.length + " of " + g.length }) : null));
+      shown.forEach(function (e) { sxItems.push(e); list.appendChild(resultRow(e, sxItems.length - 1, toks)); });
+    });
+    if (q && !total) list.appendChild(h("div", { class: "sx-empty" }, h("b", { text: "No matches for “" + SX.input.value.trim() + "”" }), h("span", { text: "Try a campus code (FSK), a report (attrition), a policy (leave) or a checklist item (POSH committee)." })));
+    SX.count.textContent = q ? total + " result" + (total === 1 ? "" : "s") : "";
+    if (sxSel >= sxItems.length) sxSel = 0;
+    moveSel(0);
+  }
+  function resultRow(e, i, toks) {
+    var t = SEARCH_TYPES[e.type] || { icon: "↺" };
+    var row = h("div", { class: "sx-item", role: "option", id: "sx-" + i, "aria-selected": String(i === sxSel) },
+      h("span", { class: "sx-ico sx-" + e.type, "aria-hidden": "true", text: t.icon }),
+      h("span", { class: "sx-text" }, h("span", { class: "sx-title" }, highlight(e.title, toks)), h("span", { class: "sx-sub" }, highlight(e.sub || "", toks))),
+      h("span", { class: "sx-go", "aria-hidden": "true", text: "↵" }));
+    row.addEventListener("mousemove", function () { if (sxSel !== i) { sxSel = i; moveSel(0); } });
+    row.addEventListener("click", function () { pick(e); });
+    return row;
+  }
+  function searchIcon() {
+    return sv("svg", { width: "16", height: "16", viewBox: "0 0 16 16", "aria-hidden": "true" },
+      sv("circle", { cx: "7", cy: "7", r: "4.8", fill: "none", stroke: "currentColor", "stroke-width": "1.6" }),
+      sv("path", { d: "M10.6 10.6 14 14", stroke: "currentColor", "stroke-width": "1.6", "stroke-linecap": "round" }));
+  }
+  document.addEventListener("keydown", function (e) {
+    var typing = /^(INPUT|TEXTAREA|SELECT)$/.test((e.target && e.target.tagName) || "") || (e.target && e.target.isContentEditable);
+    if ((e.ctrlKey || e.metaKey) && (e.key === "k" || e.key === "K")) { e.preventDefault(); if (SX) closeSearch(); else openSearch(); }
+    else if (e.key === "/" && !typing && !SX) { e.preventDefault(); openSearch(); }
+  });
 
   /* ----- hamburger: drawer on phones/tablets, collapsible sidebar on desktop ----- */
   var MOBILE = matchMedia("(max-width: 900px)");
@@ -1758,6 +1996,8 @@
       root.setAttribute("data-theme", dark ? "light" : "dark"); store("hr.portal.theme", dark ? "light" : "dark");
     });
     wireMenu();
+    var sb = $("#searchBtn"); if (sb) sb.addEventListener("click", function () { openSearch(); });
+    var mac = /Mac|iPhone|iPad/.test(navigator.platform || ""); var kb = $("#searchKbd"); if (kb) kb.textContent = mac ? "⌘ K" : "Ctrl K";
     var fresh = $("#fresh");
     if (RAW) {
       var d = RAW.meta.sources.map(function (s) { return s.as_of; }).sort();

@@ -24,6 +24,11 @@ Filters (one bar above every report): Looker-style date range (quick / year / ha
 custom), campus, payroll entity and section. Every chart has a Table view. The "View as" switch previews the
 Employee view.
 
+**Global search** (Search button, <kbd>Ctrl</kbd>/<kbd>⌘</kbd> <kbd>K</kbd> or <kbd>/</kbd>) finds reports, policies and
+their documents, every compliance checklist item (opens the editor on that exact row), campus / entity / section
+filters and date presets (applied in one click), and ticket types, exit reasons and recruitment areas. Everyday words
+work too ("turnover", "gen z", "helpdesk"). In the Employee view it searches policies only.
+
 ### Project structure
 
 ```
