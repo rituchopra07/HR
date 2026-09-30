@@ -31,7 +31,8 @@ HR/
 ├── design/                        # HR Portal (static site)
 │   ├── index.html                 # app shell (top nav + nested sidebar)
 │   ├── assets/portal.css          # design system ("The Register")
-│   ├── assets/portal.js           # router, filters, charts, report views
+│   ├── assets/portal.js           # router, filters, charts, report views, compliance editors
+│   ├── assets/config.js           # trackerApi: "" = browser storage, URL = shared database
 │   ├── data/hr-data.js            # GENERATED aggregate data — do not edit by hand
 │   └── workforce-register.html    # redirect for old links
 ├── tools/
@@ -42,7 +43,11 @@ HR/
 │   │   └── trackers/definitions.json  # checklist structure of Ritu's compliance trackers
 │   └── private/                   # git-ignored: raw tracker backups (never committed)
 ├── client/                        # React (Vite) frontend (prototype)
-└── server/                        # Express API server (prototype)
+└── server/                        # Express API: employees (prototype) + tracker API (shared compliance data)
+    ├── routes/trackers.js, routes/auth.js
+    ├── lib/                       # auth (bcrypt + JWT), validation, file / SQL Server store
+    ├── sql/001_hr_trackers.sql    # database + least-privilege login + audit history table
+    └── scripts/add-user.js        # add an HR user
 ```
 
 ### Data sources
@@ -65,11 +70,47 @@ HR_EDU_DB_PASSWORD=... python tools/export_hr_data.py
 Then commit `design/data/hr-data.js`, bump the `?v=` numbers in `design/index.html`, and push — GitHub Pages
 republishes in about a minute.
 
-#### Compliance trackers
+#### Compliance trackers (POSH, Labour Codes, Payroll)
 
-The four compliance pages read Ritu's tracker backups:
+Each tracker page has two views, mirroring Ritu's tracker (claude.ai artifact, tabs 6–8):
 
-1. In the tracker, open each tab and click its backup / export button:
+- **Overview** — entity cards (ring %, non-compliant / pending count; click to edit), category × entity heat table,
+  month-by-month view.
+- **Update entity report** — pick the entity; set a status per checklist item (per month for POSH, Payroll processing
+  and Payroll KPIs; one status for Labour Codes); remarks / corrective action per category; auto-saves; **Download
+  backup (.json)** and **Restore from backup** use the same file format as Ritu's tracker, so data moves both ways.
+
+Where edits are saved is set in `design/assets/config.js`:
+
+| `trackerApi` | Behaviour |
+|--------------|-----------|
+| `""` (today) | Saved in the browser of whoever edits. Hand over with Download backup. |
+| API URL | Shared database: HR users sign in, everyone sees the same entries, every save is stamped with who/when and versioned (a stale save is refused, not overwritten). |
+
+The editors are hidden in the Employee view.
+
+#### Tracker API — shared database (`server/`)
+
+1. Create the database and a least-privilege login: `server/sql/001_hr_trackers.sql` (run by a DBA; set the password
+   in the script first).
+2. Configure `server/.env` from `server/.env.example` — `HR_JWT_SECRET`, `HR_ALLOWED_ORIGINS`,
+   `HR_TRACKER_STORE=mssql` and the `HR_DB_*` settings.
+3. Add HR users (password is prompted and stored only as a bcrypt hash in git-ignored `server/data/hr-users.json`):
+   ```bash
+   cd server && npm install
+   node scripts/add-user.js ritu.chopra@fountainheadschools.org "Ritu Chopra" admin
+   ```
+4. Deploy the server over **HTTPS**, then set `trackerApi` in `design/assets/config.js` to `https://<host>/api`.
+5. Optional: set `tracker_api` in `tools/sources.json` so the exporter publishes % straight from the database.
+
+Endpoints: `POST /api/auth/login`, `GET /api/trackers/:tracker`, `GET|PUT /api/trackers/:tracker/:entity`,
+`GET /api/trackers/:tracker/backup`. Every tracker route needs a signed-in HR user. Hosting needs approval.
+
+#### Publishing compliance % from backups
+
+Without the shared database, the published figures come from backups:
+
+1. In Ritu's tracker (or the portal's editor), open each tab and click its backup / export button:
 
    | Tab | Backup file |
    |-----|-------------|
@@ -101,8 +142,9 @@ The site and this repo are **public**.
 
 - The exporter reads per-person rows in memory and writes **aggregate counts only** — no names, IDs, contact
   details, dates of birth or pay. Sensitive exit reasons and ticket types are grouped.
-- Compliance pages show **percentages and counts per entity and category** — not which specific checks are
-  non-compliant, and no remarks or "updated by" names. Raw backups stay in `tools/private/`.
+- Published compliance figures are **percentages and counts per entity and category** — not which specific checks
+  are non-compliant, and no remarks or "updated by" names. Raw backups stay in `tools/private/`. Item-level entries
+  live only in the editor's storage (the editor's browser, or the signed-in shared database).
 - "View as Employee" is a preview, not access control. Real role-based access needs a login-protected host.
 
 ### Run locally

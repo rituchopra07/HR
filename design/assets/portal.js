@@ -863,20 +863,23 @@
     ["Exit interview form per leaver", "Would rejoin / fit to be rehired", "Themes by campus and section"],
     "The exit-interview table in Nucleus is empty today. Once HR records interviews, they appear here automatically."));
 
-  /* ----- 03 Compliance · Ritu's trackers (Labour Codes, POSH, Payroll) ----- */
-  /* Aggregates from tools/export_hr_data.py: category % = C ÷ (C + NC) on each item's latest status,
-     entity % = mean of its category %s — the same maths as the tracker's own dashboard. */
+  /* ----- 03 Compliance · Ritu's trackers (Labour Codes, POSH, Payroll) — overview + editor ----- */
+  /* Same documents and maths as Ritu's HR tracker (claude.ai artifact, tabs 6–8):
+       doc = { items: { "ci-ii": status | { period: status } }, remarks: { ci: text }, meta: { updatedBy, updatedAt, version } }
+       category % = C ÷ (C + NC) on each item's latest status · entity % = mean of its category %s.
+     Storage is pluggable: the browser today; the shared database when HR_CONFIG.trackerApi is set. */
   var TRK = (RAW && RAW.compliance && RAW.compliance.trackers) || {};
+  var TRK_KEYS = (RAW && RAW.compliance && RAW.compliance.entity_keys) || {};          // FPV -> FP_Vesu (her keys)
+  var TRK_FROM_KEY = {}; Object.keys(TRK_KEYS).forEach(function (k) { TRK_FROM_KEY[TRK_KEYS[k]] = k; });
   var TRK_ORDER = [
-    { id: "labour", route: "compliance/labour", tab: "Statutory Compliance (Labour Codes)", short: "Labour Codes" },
-    { id: "posh", route: "compliance/posh", tab: "POSH Compliance Ledger", short: "POSH" },
-    { id: "payroll_processing", route: "compliance/payroll-processing", tab: "Payroll → Processing Checklist", short: "Payroll processing" },
-    { id: "payroll_kpi", route: "compliance/payroll-kpi", tab: "Payroll → Payroll KPIs", short: "Payroll KPIs" }
+    { id: "labour", route: "compliance/labour", tab: "7 · Compliance", short: "Labour Codes" },
+    { id: "posh", route: "compliance/posh", tab: "6 · POSH", short: "POSH" },
+    { id: "payroll_processing", route: "compliance/payroll-processing", tab: "8 · Payroll → Processing Checklist", short: "Payroll processing" },
+    { id: "payroll_kpi", route: "compliance/payroll-kpi", tab: "8 · Payroll → Payroll KPIs", short: "Payroll KPIs" }
   ];
   var ENTITY_NAME = { PSPL: "Protego (PSPL)" };
   function entLabel(e) { return ENTITY_NAME[e] || cLabel(e); }
   function trkEntities(t) { return (t.entities || []).filter(function (e) { return ALL_C.indexOf(e) < 0 || S.campuses.has(e); }); }
-  /* her colour tiers: 90%+ compliant, 70–89% in progress, below 70% needs attention */
   function tier(p) { return p == null ? null : p >= 90 ? "good" : p >= 70 ? "warning" : "critical"; }
   var TIER_LABEL = { good: "Compliant (90%+)", warning: "In progress (70–89%)", critical: "Needs attention (<70%)" };
   function tierLegend() {
@@ -890,75 +893,346 @@
       p == null ? h("span", { class: "tc-empty", text: "—" }) : [h("b", { text: p + "%" }), k === "critical" ? h("span", { class: "tc-flag", "aria-label": "needs attention", text: "!" }) : null]);
     return tip(td, function () { return { head: head, rows: [{ value: p == null ? "No data yet" : p + "%", label: p == null ? "" : TIER_LABEL[k] }].concat(extra || []) }; });
   }
-  function trkRow(t, e, ci) { for (var i = 0; i < t.rows.length; i++) if (t.rows[i].e === e && t.rows[i].ci === ci) return t.rows[i]; return null; }
-  function trkStats(t, ents) {
-    var vals = ents.map(function (e) { return t.overall[e]; }).filter(function (v) { return v != null; });
+  function flagWord(tid, n) { return tid === "payroll_processing" ? n + " pending" : n + " non-compliant"; }
+
+  /* ---------- tracker maths ---------- */
+  function latestStatus(t, v) {
+    if (typeof v === "string") return v;
+    if (!v) return "";
+    var ps = t.periods || [], order = t.latest === "first" ? ps : ps.slice().reverse();
+    for (var i = 0; i < order.length; i++) if (v[order[i]]) return v[order[i]];
+    return "";
+  }
+  function catStats(t, doc, ci, period) {
+    var st = t.statuses, n = t.categories[ci].items.length, yes = 0, no = 0, na = 0;
+    for (var ii = 0; ii < n; ii++) {
+      var v = doc.items[ci + "-" + ii], s = period ? (v && typeof v === "object" ? v[period] || "" : "") : latestStatus(t, v);
+      if (s === st.yes) yes++; else if (s === st.no) no++; else if (s === st.na) na++;
+    }
+    return { yes: yes, no: no, na: na, blank: n - yes - no - na, pct: yes + no ? Math.round(yes / (yes + no) * 100) : null };
+  }
+  function docSummary(t, doc, period) {
+    var cats = t.categories.map(function (_, ci) { return catStats(t, doc, ci, period); });
+    var ps = cats.map(function (c) { return c.pct; }).filter(function (p) { return p != null; });
+    return { cats: cats, overall: ps.length ? Math.round(sum(ps) / ps.length) : null, flagged: sum(cats, function (c) { return c.no; }) };
+  }
+  function blankDoc(t) {
+    var items = {}, remarks = {};
+    t.categories.forEach(function (c, ci) {
+      c.items.forEach(function (_, ii) {
+        if (t.periods) { var m = {}; t.periods.forEach(function (p) { m[p] = ""; }); items[ci + "-" + ii] = m; } else items[ci + "-" + ii] = "";
+      });
+      remarks[ci] = "";
+    });
+    return { items: items, remarks: remarks, meta: { updatedBy: "", updatedAt: "", version: 0 } };
+  }
+  /* bring any document (hers, ours, older) to the current checklist shape */
+  function normaliseDoc(t, doc) {
+    var d = blankDoc(t), allowed = {}; allowed[t.statuses.yes] = allowed[t.statuses.no] = allowed[t.statuses.na] = 1;
+    Object.keys(d.items).forEach(function (k) {
+      var v = doc && doc.items && doc.items[k];
+      if (t.periods) t.periods.forEach(function (p) { var s = v && typeof v === "object" ? v[p] : ""; d.items[k][p] = allowed[s] ? s : ""; });
+      else d.items[k] = typeof v === "string" && allowed[v] ? v : "";
+    });
+    Object.keys(d.remarks).forEach(function (ci) { var r = doc && doc.remarks && doc.remarks[ci]; d.remarks[ci] = typeof r === "string" ? r : ""; });
+    var m = (doc && doc.meta) || {};
+    d.meta = { updatedBy: m.updatedBy || "", updatedAt: m.updatedAt || "", version: m.version || 0 };
+    return d;
+  }
+
+  /* ---------- storage ---------- */
+  var API = String((window.HR_CONFIG && window.HR_CONFIG.trackerApi) || "").replace(/\/+$/, "");
+  var LocalStore = {
+    kind: "local",
+    key: function (tid, e) { return "hr.trk.v1." + tid + "." + e; },
+    list: function (tid) {
+      var out = {}; (TRK[tid].entities || []).forEach(function (e) { var d = store(LocalStore.key(tid, e)); if (d) out[e] = d; });
+      return Promise.resolve(out);
+    },
+    put: function (tid, e, doc) {
+      doc.meta.updatedAt = new Date().toISOString(); doc.meta.version = (doc.meta.version || 0) + 1;
+      store(LocalStore.key(tid, e), doc);
+      return Promise.resolve(doc);
+    }
+  };
+  var RemoteStore = {
+    kind: "remote",
+    token: function () { try { return sessionStorage.getItem("hr.api.token"); } catch (e) { return null; } },
+    user: function () { try { return JSON.parse(sessionStorage.getItem("hr.api.user")); } catch (e) { return null; } },
+    signedIn: function () { return !!RemoteStore.token(); },
+    signOut: function () { try { sessionStorage.removeItem("hr.api.token"); sessionStorage.removeItem("hr.api.user"); } catch (e) { /* ignore */ } DOCS = {}; },
+    call: function (method, path, body) {
+      return fetch(API + path, { method: method, headers: Object.assign({ "Content-Type": "application/json" }, RemoteStore.token() ? { Authorization: "Bearer " + RemoteStore.token() } : {}), body: body ? JSON.stringify(body) : undefined })
+        .then(function (r) { return r.json().catch(function () { return {}; }).then(function (b) { if (r.status === 401 && path.indexOf("/auth/") < 0) RemoteStore.signOut(); return { status: r.status, body: b }; }); });
+    },
+    login: function (email, password) {
+      return RemoteStore.call("POST", "/auth/login", { email: email, password: password }).then(function (r) {
+        if (r.status !== 200) throw new Error(r.body.error || "Sign-in failed");
+        try { sessionStorage.setItem("hr.api.token", r.body.token); sessionStorage.setItem("hr.api.user", JSON.stringify(r.body.user)); } catch (e) { /* ignore */ }
+        return r.body.user;
+      });
+    },
+    list: function (tid) {
+      return RemoteStore.call("GET", "/trackers/" + tid).then(function (r) { if (r.status !== 200) throw new Error(r.body.error || "Couldn't load"); return r.body.entities || {}; });
+    },
+    put: function (tid, e, doc) {
+      return RemoteStore.call("PUT", "/trackers/" + tid + "/" + e, { doc: { items: doc.items, remarks: doc.remarks }, baseVersion: doc.meta.version || 0 }).then(function (r) {
+        if (r.status === 409) { var err = new Error("conflict"); err.current = r.body.current; throw err; }
+        if (r.status !== 200) throw new Error(r.body.error || "Save failed");
+        return r.body;
+      });
+    }
+  };
+  var TStore = API ? RemoteStore : LocalStore;
+  var DOCS = {};                 // tid -> { entity: normalised doc } once loaded
+  var LOADING = {};
+  function docsFor(tid) {
+    if (DOCS[tid] || LOADING[tid] || (TStore.kind === "remote" && !RemoteStore.signedIn())) return DOCS[tid] || null;
+    LOADING[tid] = true;
+    TStore.list(tid).then(function (raw) {
+      var out = {}; Object.keys(raw).forEach(function (e) { out[e] = normaliseDoc(TRK[tid], raw[e]); });
+      DOCS[tid] = out;
+    }).catch(function (err) { toast("Couldn't load " + TRK[tid].title + ": " + err.message); DOCS[tid] = DOCS[tid] || {}; })
+      .then(function () { LOADING[tid] = false; if (current && current.sec === "compliance") rerender(); });
+    return null;
+  }
+  function docOf(tid, e) { var d = DOCS[tid] || {}; if (!d[e]) d[e] = blankDoc(TRK[tid]); DOCS[tid] = d; return d[e]; }
+
+  /* What the overview shows: entered data (browser or shared DB) if any, else the published figures. */
+  function effective(tid) {
+    var t = TRK[tid], docs = docsFor(tid) || {};
+    var entered = Object.keys(docs).filter(function (e) { return docs[e].meta.updatedAt; });
+    if (entered.length) {
+      var sums = {}; entered.forEach(function (e) { sums[e] = docSummary(t, docs[e]); });
+      return {
+        source: TStore.kind, has: function (e) { return !!sums[e]; },
+        overall: function (e) { return sums[e] ? sums[e].overall : null; }, flagged: function (e) { return sums[e] ? sums[e].flagged : 0; },
+        cat: function (e, ci) { return sums[e] ? sums[e].cats[ci] : null; },
+        trend: function (e, p) { return docs[e] ? docSummary(t, docs[e], p).overall : null; },
+        asOf: entered.map(function (e) { return docs[e].meta.updatedAt; }).sort().pop()
+      };
+    }
+    var row = function (e, ci) { for (var i = 0; i < t.rows.length; i++) if (t.rows[i].e === e && t.rows[i].ci === ci) return t.rows[i]; return null; };
     return {
-      avg: vals.length ? Math.round(sum(vals) / vals.length) : null, reporting: vals.length,
-      nc: sum(ents, function (e) { return t.flagged[e] || 0; }),
-      good: vals.filter(function (v) { return v >= 90; }).length,
-      items: sum(t.categories, function (c) { return c.n; })
+      source: t.status === "ready" ? "published" : "none", has: function (e) { return t.overall[e] != null; },
+      overall: function (e) { return t.overall[e] == null ? null : t.overall[e]; }, flagged: function (e) { return t.flagged[e] || 0; },
+      cat: row, trend: function (e, p) { var r = (t.trend || []).filter(function (x) { return x.e === e && x.p === p; })[0]; return r ? r.pct : null; },
+      asOf: t.as_of
     };
   }
-
-  function awaiting(t, meta) {
-    return h("section", { class: "card awaiting" }, h("div", { class: "soon-card" }, h("div", { class: "glyph", text: "↧" }),
-      h("div", null, h("h3", { text: "Waiting for the " + t.title + " backup" }),
-        h("p", { text: "The checklist below is live from Ritu's tracker; the statuses arrive with its JSON backup." }),
-        h("ol", { class: "steps" },
-          h("li", null, "In Ritu's HR tracker, open ", h("b", { text: meta.tab }), " and click the backup / export button."),
-          h("li", null, "Save the downloaded file into ", h("code", { text: "tools/private/trackers/" }), " (never pushed to GitHub)."),
-          h("li", null, "Run ", h("code", { text: "python tools/export_hr_data.py" }), " and publish — only percentages go live.")))));
+  function effStats(tid, ents) {
+    var E = effective(tid), vals = ents.map(function (e) { return E.overall(e); }).filter(function (v) { return v != null; });
+    return { E: E, avg: vals.length ? Math.round(sum(vals) / vals.length) : null, reporting: vals.length,
+      nc: sum(ents, function (e) { return E.flagged(e); }), good: vals.filter(function (v) { return v >= 90; }).length,
+      items: sum(TRK[tid].categories, function (c) { return c.items.length; }) };
   }
 
-  function checklist(t) {
-    return h("div", { class: "policy-list" }, t.categories.map(function (c, ci) {
-      return h("details", { class: "policy" },
-        h("summary", null, h("span", { class: "pico", text: String(ci + 1) }), h("span", { class: "pt" }, h("b", { text: c.title }), h("span", { text: c.n + " check" + (c.n === 1 ? "" : "s") })), h("span", { class: "chev", text: "›" })),
-        c.items ? c.items.map(function (it) { return h("div", { class: "doc-row" }, h("span", { class: "di", text: "◦" }), h("div", { class: "dn", style: { "font-weight": "500" }, text: it }), h("span")); })
-          : h("div", { class: "doc-row" }, h("span", { class: "di", text: "◦" }), h("div", { class: "dm", text: c.n + " recurring payroll tasks — wording kept internal." }), h("span")));
+  /* ---------- page chrome: storage mode + Overview / Update toggle ---------- */
+  var ED = { view: {}, entity: {} };
+  function modeBar(tid) {
+    var st = TStore.kind === "remote"
+      ? (RemoteStore.signedIn() ? [h("i", { class: "dot live" }), "Shared database · signed in as ", h("b", { text: (RemoteStore.user() || {}).name || "HR" }), h("button", { type: "button", class: "linkbtn", onclick: function () { RemoteStore.signOut(); rerender(); } }, "Sign out")]
+        : [h("i", { class: "dot" }), "Shared database · sign in to edit"])
+      : [h("i", { class: "dot local" }), "Saved in this browser until the shared database is connected — use ", h("b", { text: "Download backup" }), " to hand entries over."];
+    return h("div", { class: "trk-mode" }, st);
+  }
+  function viewSwitch(meta) {
+    var cur = ED.view[meta.id] || "overview";
+    return h("div", { class: "seg", role: "tablist", "aria-label": "View" }, [["overview", "Overview"], ["editor", "Update entity report"]].map(function (v) {
+      return h("button", { type: "button", role: "tab", "aria-selected": String(cur === v[0]), onclick: function () { ED.view[meta.id] = v[0]; rerender(); } }, v[1]);
     }));
+  }
+  function ring(p) {
+    var r = 17, c = 2 * Math.PI * r, k = tier(p);
+    return sv("svg", { class: "ring", viewBox: "0 0 44 44", width: "56", height: "56", "aria-hidden": "true" },
+      sv("circle", { cx: "22", cy: "22", r: r, class: "ring-track" }),
+      sv("circle", { cx: "22", cy: "22", r: r, class: "ring-val" + (k ? " ring-" + k : ""), "stroke-dasharray": c, "stroke-dashoffset": p == null ? c : c * (1 - p / 100), transform: "rotate(-90 22 22)" }));
+  }
+  function stampCards(meta, t, E, ents) {
+    return h("div", { class: "stamps" }, ents.map(function (e) {
+      var p = E.overall(e), f = E.flagged(e);
+      return h("button", { type: "button", class: "stamp", title: "Open " + entLabel(e) + " in the editor", onclick: function () { ED.view[meta.id] = "editor"; ED.entity[meta.id] = e; rerender(); } },
+        h("span", { class: "stamp-ring" }, ring(p), h("b", { text: p == null ? "–" : p + "%" })),
+        h("span", { class: "stamp-code", text: entLabel(e) }),
+        h("span", { class: "stamp-flag" + (f ? " warn" : ""), text: E.has(e) ? (f ? flagWord(meta.id, f) : (meta.id === "payroll_processing" ? "none pending" : "no gaps flagged")) : "no data yet" }));
+    }));
+  }
+
+  function trackerOverview(meta, t, ents) {
+    var s = effStats(meta.id, ents), E = s.E;
+    var src = { published: "Published figures", local: "Entered in this browser", remote: "Shared database", none: "No data yet" }[E.source];
+    var head = h("tr", null, h("th", { text: "Category" }), ents.map(function (e) { return h("th", { class: "num", text: entLabel(e).split(" · ")[0] }); }));
+    var body = t.categories.map(function (c, ci) {
+      return h("tr", null, h("td", { class: "ent" }, h("span", { class: "cat-n", text: String(ci + 1) }), c.title),
+        ents.map(function (e) { var r = E.cat(e, ci); return tierCell(r ? r.pct : null, entLabel(e) + " · " + c.title, r ? [{ value: r.yes + " / " + (r.yes + r.no), label: "compliant of assessed" }, { value: fmt(r.na), label: "not applicable" }, { value: fmt(r.blank), label: "not yet assessed" }] : []); }));
+    });
+    body.unshift(h("tr", { class: "overall-row" }, h("td", { class: "ent" }, h("b", { text: "Overall" })), ents.map(function (e) { return tierCell(E.overall(e), entLabel(e) + " · overall", [{ value: fmt(E.flagged(e)), label: meta.id === "payroll_processing" ? "pending tasks" : "non-compliant items" }]); })));
+    var parts = [
+      h("div", { class: "tiles" },
+        tile("Average compliance", s.avg == null ? "—" : String(s.avg), s.avg == null ? null : "%", s.reporting + " of " + ents.length + " entities reporting"),
+        tile("Entities at 90%+", fmt(s.good), null, "Compliant tier"),
+        tile(meta.id === "payroll_processing" ? "Pending tasks" : "Non-compliant items", fmt(s.nc), null, "Latest status"),
+        tile("Checks tracked", fmt(s.items), null, t.categories.length + " categories")),
+      card({ title: "Entities", hint: src + (E.asOf ? " · updated " + dLabel(String(E.asOf).slice(0, 10)) : "") + " · click an entity to update it", body: stampCards(meta, t, E, ents) }),
+      card({ title: "Compliance by category", hint: "Latest status of each check", body: [h("div", { class: "tscroll" }, h("table", { class: "t heat tmatrix cat-rows" }, h("thead", null, head), h("tbody", null, body))), tierLegend()],
+        table: function () { return { cols: [{ label: "Category" }].concat(ents.map(function (e) { return { label: e, num: true }; })), rows: t.categories.map(function (c, ci) { return { cells: [c.title].concat(ents.map(function (e) { var r = E.cat(e, ci); return r && r.pct != null ? r.pct + "%" : "—"; })) }; }) }; } })
+    ];
+    if (t.periods && E.source !== "none") {
+      var months = t.periods.filter(function (p) { return ents.some(function (e) { return E.trend(e, p) != null; }); });
+      if (meta.id === "payroll_processing") months.reverse();
+      if (months.length) parts.push(card({ title: "Month by month", hint: "Entity compliance in each month", body: h("div", { class: "tscroll" }, h("table", { class: "t heat tmatrix" },
+        h("thead", null, h("tr", null, h("th", { text: "Entity" }), months.map(function (m) { return h("th", { class: "num", text: m }); }))),
+        h("tbody", null, ents.map(function (e) { return h("tr", null, h("td", { class: "ent", text: entLabel(e) }), months.map(function (m) { return tierCell(E.trend(e, m), entLabel(e) + " · " + m); })); })))) }));
+    }
+    if (E.source === "none") parts.splice(1, 0, note([h("b", { text: "No entries yet. " }), "Open ", h("b", { text: "Update entity report" }), " to start, or restore a backup downloaded from Ritu's tracker (" + meta.tab + ")."]));
+    return parts;
+  }
+
+  /* ---------- editor ---------- */
+  var saveTimers = {};
+  function signInCard() {
+    var email = h("input", { type: "email", autocomplete: "username", placeholder: "you@fountainheadschools.org", "aria-label": "Email" });
+    var pw = h("input", { type: "password", autocomplete: "current-password", placeholder: "Password", "aria-label": "Password" });
+    var msg = h("p", { class: "signin-msg", role: "alert" });
+    var go = function (ev) {
+      ev.preventDefault(); msg.textContent = "Signing in…";
+      RemoteStore.login(email.value.trim(), pw.value).then(function () { DOCS = {}; toast("Signed in"); rerender(); }).catch(function (e) { msg.textContent = e.message; });
+    };
+    return h("section", { class: "card signin" }, h("h3", { text: "Sign in to update compliance" }),
+      h("p", { class: "hint", text: "Entries are shared with everyone in HR, and every save records who made it." }),
+      h("form", { onsubmit: go }, email, pw, h("button", { class: "btn", type: "submit" }, "Sign in")), msg);
+  }
+  function statusClass(t, s) { return s === t.statuses.yes ? "st-yes" : s === t.statuses.no ? "st-no" : s === t.statuses.na ? "st-na" : "st-empty"; }
+  function shortStatus(t, s) { return s === "Compliant" ? "C" : s === "Non-Compliant" ? "NC" : s; }
+
+  function trackerEditor(meta, t, ents) {
+    if (TStore.kind === "remote" && !RemoteStore.signedIn()) return [signInCard()];
+    var docs = docsFor(meta.id);
+    if (!docs && TStore.kind === "remote") return [h("section", { class: "card" }, empty("Loading entries…"))];
+    var e = ED.entity[meta.id] && t.entities.indexOf(ED.entity[meta.id]) >= 0 ? ED.entity[meta.id] : t.entities[0];
+    ED.entity[meta.id] = e;
+    var doc = docOf(meta.id, e);
+    var saveEl = h("span", { class: "save-ind", "aria-live": "polite", text: doc.meta.updatedAt ? "Saved ✓" : "" });
+    var stamp = h("span", { class: "stamp-line", text: doc.meta.updatedAt ? "Last updated " + new Date(doc.meta.updatedAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) + (doc.meta.updatedBy ? " by " + doc.meta.updatedBy : "") : "Not updated yet" });
+
+    function scheduleSave() {
+      saveEl.textContent = "Saving…"; saveEl.className = "save-ind busy";
+      clearTimeout(saveTimers[meta.id]);
+      saveTimers[meta.id] = setTimeout(function () {
+        if (TStore.kind === "local") doc.meta.updatedBy = byInput ? byInput.value.trim() : doc.meta.updatedBy;
+        TStore.put(meta.id, e, doc).then(function (saved) {
+          var n = normaliseDoc(t, saved); doc.meta = n.meta; DOCS[meta.id][e] = doc;
+          saveEl.textContent = "Saved ✓"; saveEl.className = "save-ind ok";
+          stamp.textContent = "Last updated " + new Date(doc.meta.updatedAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) + (doc.meta.updatedBy ? " by " + doc.meta.updatedBy : "");
+        }).catch(function (err) {
+          if (err.current) {
+            DOCS[meta.id][e] = normaliseDoc(t, err.current);
+            toast((err.current.meta.updatedBy || "Someone") + " saved " + entLabel(e) + " a moment ago — loaded their version; please re-apply your last change.");
+            rerender();
+          } else { saveEl.textContent = "Not saved — " + err.message; saveEl.className = "save-ind err"; }
+        });
+      }, 650);
+    }
+
+    var sel = h("select", { class: "fsel", "aria-label": "Entity", onchange: function (ev) { ED.entity[meta.id] = ev.target.value; rerender(); } },
+      t.entities.map(function (x) { return h("option", { value: x, selected: x === e }, entLabel(x)); }));
+    var byInput = null;
+    if (TStore.kind === "local") {
+      byInput = h("input", { class: "finput", type: "text", placeholder: "Your name", value: doc.meta.updatedBy || store("hr.trk.me") || "", "aria-label": "Updated by",
+        onchange: function (ev) { store("hr.trk.me", ev.target.value.trim()); } });
+    }
+    var fileIn = h("input", { type: "file", accept: "application/json,.json", class: "sr-only", onchange: function (ev) { restoreBackup(meta, t, ev.target.files[0]); ev.target.value = ""; } });
+
+    var toolbar = h("div", { class: "trk-toolbar" },
+      h("label", { class: "tb-field" }, h("span", { text: "Entity" }), sel),
+      byInput ? h("label", { class: "tb-field" }, h("span", { text: "Updated by" }), byInput) : h("div", { class: "tb-field" }, h("span", { text: "Updated by" }), h("b", { text: (RemoteStore.user() || {}).name || "" })),
+      h("div", { class: "tb-stamp" }, stamp, saveEl),
+      h("div", { class: "tb-actions" },
+        h("button", { type: "button", class: "btn ghost", onclick: function () { downloadBackup(meta, t); } }, "Download backup (.json)"),
+        h("label", { class: "btn ghost", tabindex: "0", onkeydown: function (ev) { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); fileIn.click(); } } }, "Restore from backup", fileIn)));
+
+    var st = t.statuses;
+    var opts = [["", "–"], [st.yes, shortStatus(t, st.yes)], [st.no, shortStatus(t, st.no)], [st.na, "N/A"]];
+    var WORD = { C: "C · Compliant", Compliant: "C · Compliant", NC: "NC · Non-compliant", "Non-Compliant": "NC · Non-compliant", Done: "Done", Pending: "Pending" };
+    var legend = h("div", { class: "legend st-legend" },
+      h("span", { class: "it" }, h("i", { class: "sw st-yes" }), WORD[st.yes] || st.yes),
+      h("span", { class: "it" }, h("i", { class: "sw st-no" }), WORD[st.no] || st.no),
+      h("span", { class: "it" }, h("i", { class: "sw st-na" }), "N/A"),
+      h("span", { class: "it", style: { color: "var(--ink-3)" } }, t.periods ? "Pick a status in each month's dropdown" : "Pick the current status of each check"));
+
+    var periods = t.periods || null;
+    var acc = t.categories.map(function (c, ci) {
+      var badge = h("span", { class: "cat-badge" });
+      var paint = function () {
+        var s = catStats(t, doc, ci), k = tier(s.pct);
+        badge.className = "cat-badge" + (k ? " tier-" + k : " tier-none"); badge.textContent = s.pct == null ? "No data" : s.pct + "%";
+        badge.title = s.yes + " " + st.yes + " · " + s.no + " " + st.no + " · " + s.na + " N/A · " + s.blank + " blank";
+      };
+      paint();
+      var rows = c.items.map(function (label, ii) {
+        var key = ci + "-" + ii;
+        var cells = (periods || [null]).map(function (p) {
+          var val = p ? doc.items[key][p] : doc.items[key];
+          var s = h("select", { class: "st " + statusClass(t, val), "aria-label": label + (p ? " — " + p : "") },
+            opts.map(function (o) { return h("option", { value: o[0], selected: o[0] === val }, o[1]); }));
+          s.addEventListener("change", function () {
+            if (p) doc.items[key][p] = s.value; else doc.items[key] = s.value;
+            s.className = "st " + statusClass(t, s.value); paint(); scheduleSave();
+          });
+          return h("td", { class: "st-cell" }, s);
+        });
+        return h("tr", null, h("td", { class: "item-label", text: label }), cells);
+      });
+      var remarks = h("textarea", { rows: "2", placeholder: "Notes for this category…", "aria-label": "Remarks / corrective action — " + c.title });
+      remarks.value = doc.remarks[ci] || "";
+      remarks.addEventListener("input", function () { doc.remarks[ci] = remarks.value; scheduleSave(); });
+      return h("details", { class: "trk-acc", open: ci === 0 },
+        h("summary", null, h("span", { class: "pico", text: String(ci + 1) }), h("span", { class: "pt" }, h("b", { text: c.title }), h("span", { text: c.items.length + " check" + (c.items.length === 1 ? "" : "s") })), badge, h("span", { class: "chev", text: "›" })),
+        h("div", { class: "tscroll" }, h("table", { class: "trk-grid" },
+          h("thead", null, h("tr", null, h("th", { text: "Checklist item" }), (periods || ["Status"]).map(function (p) { return h("th", { text: p }); }))),
+          h("tbody", null, rows))),
+        h("label", { class: "remarks" }, h("span", { text: "Remarks / corrective action (" + c.title + ")" }), remarks));
+    });
+    return [toolbar, legend, h("div", { class: "trk-accs" }, acc)];
+  }
+
+  function downloadBackup(meta, t) {
+    var docs = DOCS[meta.id] || {}, entities = {};
+    Object.keys(docs).forEach(function (e) { if (docs[e].meta.updatedAt) entities[TRK_KEYS[e] || e] = docs[e]; });
+    var blob = new Blob([JSON.stringify({ exportedAt: new Date().toISOString(), entities: entities }, null, 2)], { type: "application/json" });
+    var a = h("a", { href: URL.createObjectURL(blob), download: t.backup_prefix + new Date().toISOString().slice(0, 10) + ".json" });
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+    toast("Backup downloaded — " + Object.keys(entities).length + " entit" + (Object.keys(entities).length === 1 ? "y" : "ies"));
+  }
+  function restoreBackup(meta, t, file) {
+    if (!file) return;
+    var rd = new FileReader();
+    rd.onload = function () {
+      var bundle; try { bundle = JSON.parse(rd.result); } catch (e) { toast("That file isn't valid JSON."); return; }
+      var ents = bundle && bundle.entities;
+      if (!ents || typeof ents !== "object") { toast("Not a tracker backup — expected an \"entities\" object."); return; }
+      var codes = Object.keys(ents).map(function (k) { return TRK_FROM_KEY[k] || k; }).filter(function (c) { return t.entities.indexOf(c) >= 0; });
+      if (!codes.length) { toast("No " + t.title + " entities found in that backup."); return; }
+      if (!window.confirm("Replace " + t.title + " entries for " + codes.join(", ") + " with this backup?")) return;
+      DOCS[meta.id] = DOCS[meta.id] || {};
+      var jobs = codes.map(function (c) {
+        var incoming = normaliseDoc(t, ents[TRK_KEYS[c] || c] || ents[c]);
+        var cur = DOCS[meta.id][c]; incoming.meta.version = cur ? cur.meta.version : 0;   // restore on top of what's stored
+        if (TStore.kind === "local" && !incoming.meta.updatedBy) incoming.meta.updatedBy = "Restored from backup";
+        return TStore.put(meta.id, c, incoming).then(function (saved) { DOCS[meta.id][c] = normaliseDoc(t, saved); });
+      });
+      Promise.all(jobs).then(function () { toast("Restored " + codes.length + " entit" + (codes.length === 1 ? "y" : "ies") + " from backup"); rerender(); })
+        .catch(function (err) { toast("Restore stopped: " + (err.current ? "someone saved meanwhile — try again" : err.message)); DOCS[meta.id] = null; rerender(); });
+    };
+    rd.readAsText(file);
   }
 
   function trackerPage(meta) {
     var t = TRK[meta.id];
     if (!t) return [empty("Tracker definitions not loaded", "Run python tools/export_hr_data.py.")];
-    var ents = trkEntities(t), st = trkStats(t, ents), ready = t.status === "ready";
-    var catCols = t.categories.map(function (c, ci) { return { ci: ci, label: c.title }; });
-    var head = h("tr", null, h("th", { text: "Entity" }), h("th", { class: "num", text: "Overall" }), catCols.map(function (c) { return h("th", { class: "rot", title: c.label }, h("span", { text: c.label })); }));
-    var body = ents.map(function (e) {
-      return h("tr", null, h("td", { class: "ent" }, h("i", { class: "sw", style: { background: CAMPUS_COLOR[e] || "var(--s7)" } }), entLabel(e)),
-        tierCell(t.overall[e] == null ? null : t.overall[e], entLabel(e) + " · overall", [{ value: fmt(t.flagged[e] || 0), label: "non-compliant items" }]),
-        catCols.map(function (c) {
-          var r = trkRow(t, e, c.ci);
-          return tierCell(r ? r.pct : null, entLabel(e) + " · " + c.label, r ? [{ value: r.yes + " / " + (r.yes + r.no), label: "compliant of resolved" }, { value: fmt(r.na), label: "not applicable" }, { value: fmt(r.blank), label: "not yet assessed" }] : []);
-        }));
-    });
-    var matrix = card({ title: "Compliance by entity and category", hint: ready ? "Latest status of each check · as of " + (t.as_of ? dLabel(t.as_of) : "—") : "Fills in when the backup arrives",
-      body: [h("div", { class: "tscroll" }, h("table", { class: "t heat tmatrix" }, h("thead", null, head), h("tbody", null, body))), tierLegend()],
-      table: function () {
-        return { cols: [{ label: "Entity" }, { label: "Overall", num: true }].concat(catCols.map(function (c) { return { label: c.label, num: true }; })),
-          rows: ents.map(function (e) { return { cells: [entLabel(e), t.overall[e] == null ? "—" : t.overall[e] + "%"].concat(catCols.map(function (c) { var r = trkRow(t, e, c.ci); return r && r.pct != null ? r.pct + "%" : "—"; })) }; }) };
-      } });
-    var parts = [
-      h("div", { class: "tiles" },
-        tile("Average compliance", st.avg == null ? "—" : String(st.avg), st.avg == null ? null : "%", st.reporting + " of " + ents.length + " entities reporting"),
-        tile("Entities at 90%+", fmt(st.good), null, "Compliant tier"),
-        tile("Non-compliant items", fmt(st.nc), null, "Open NC checks, latest status"),
-        tile("Checks tracked", fmt(st.items), null, t.categories.length + " categories")),
-      ready ? null : awaiting(t, meta),
-      matrix
-    ];
-    if (ready && t.periods && t.trend.length) {
-      var months = t.periods.filter(function (p) { return t.trend.some(function (r) { return r.p === p; }); });
-      if (meta.id === "payroll_processing") months = months.slice().reverse();     // her list is latest-first
-      parts.push(card({ title: "Month by month", hint: "Entity compliance in each month", body: h("div", { class: "tscroll" }, h("table", { class: "t heat tmatrix" },
-        h("thead", null, h("tr", null, h("th", { text: "Entity" }), months.map(function (m) { return h("th", { class: "num", text: m }); }))),
-        h("tbody", null, ents.map(function (e) { return h("tr", null, h("td", { class: "ent", text: entLabel(e) }), months.map(function (m) { var r = t.trend.filter(function (x) { return x.e === e && x.p === m; })[0]; return tierCell(r ? r.pct : null, entLabel(e) + " · " + m); })); })))) }));
-    }
-    parts.push(card({ title: "What is checked", hint: st.items + " checks in " + t.categories.length + " categories — from Ritu's tracker", body: checklist(t) }));
-    parts.push(note([h("b", { text: "Published: " }), "percentages and counts per entity and category only. Which specific checks are non-compliant stays in Ritu's tracker — the site is public."]));
-    return parts;
+    var ents = trkEntities(t);
+    var top = h("div", { class: "trk-head" }, viewSwitch(meta), modeBar(meta.id));
+    return [top].concat((ED.view[meta.id] || "overview") === "editor" ? trackerEditor(meta, t, ents) : trackerOverview(meta, t, ents));
   }
 
   view({
@@ -969,35 +1243,40 @@
       var entSet = [];
       TRK_ORDER.forEach(function (m) { var t = TRK[m.id]; if (t) trkEntities(t).forEach(function (e) { if (entSet.indexOf(e) < 0) entSet.push(e); }); });
       var order = ["PSPL"].concat(ALL_C); entSet.sort(function (a, b) { return order.indexOf(a) - order.indexOf(b); });
+      var stats = {}; TRK_ORDER.forEach(function (m) { if (TRK[m.id]) stats[m.id] = effStats(m.id, trkEntities(TRK[m.id])); });
       var tiles = TRK_ORDER.map(function (m) {
-        var t = TRK[m.id]; if (!t) return null; var s = trkStats(t, trkEntities(t));
-        return tile(m.short, s.avg == null ? "—" : String(s.avg), s.avg == null ? null : "%", t.status === "ready" ? fmt(s.nc) + " non-compliant · " + s.reporting + " entities" : "Awaiting backup", { go: m.route });
+        var s = stats[m.id]; if (!s) return null;
+        return tile(m.short, s.avg == null ? "—" : String(s.avg), s.avg == null ? null : "%", s.E.source === "none" ? "No entries yet" : flagWord(m.id, s.nc) + " · " + s.reporting + " entities", { go: m.route });
       });
       var head = h("tr", null, h("th", { text: "Entity" }), TRK_ORDER.map(function (m) { return h("th", { class: "num" }, h("a", { href: "#/" + m.route, text: m.short })); }));
       var rows = entSet.map(function (e) {
         return h("tr", null, h("td", { class: "ent" }, h("i", { class: "sw", style: { background: CAMPUS_COLOR[e] || "var(--s7)" } }), entLabel(e)),
-          TRK_ORDER.map(function (m) { var t = TRK[m.id]; if (!t || (t.entities || []).indexOf(e) < 0) return h("td", { class: "cell tier-none na-cell", text: "n/a" }); return tierCell(t.overall[e] == null ? null : t.overall[e], entLabel(e) + " · " + m.short, [{ value: fmt(t.flagged[e] || 0), label: "non-compliant items" }]); }));
+          TRK_ORDER.map(function (m) { var t = TRK[m.id]; if (!t || (t.entities || []).indexOf(e) < 0) return h("td", { class: "cell tier-none na-cell", text: "n/a" }); var E = stats[m.id].E; return tierCell(E.overall(e), entLabel(e) + " · " + m.short, [{ value: fmt(E.flagged(e)), label: m.id === "payroll_processing" ? "pending tasks" : "non-compliant items" }]); }));
       });
-      // weakest entity × category combinations across all trackers
       var weak = [];
-      TRK_ORDER.forEach(function (m) { var t = TRK[m.id]; if (!t) return; t.rows.forEach(function (r) { if (r.pct != null && r.pct < 70 && trkEntities(t).indexOf(r.e) >= 0) weak.push({ m: m, t: t, r: r }); }); });
+      TRK_ORDER.forEach(function (m) {
+        var t = TRK[m.id]; if (!t) return; var E = stats[m.id].E;
+        trkEntities(t).forEach(function (e) { t.categories.forEach(function (c, ci) { var r = E.cat(e, ci); if (r && r.pct != null && r.pct < 70) weak.push({ m: m, t: t, e: e, ci: ci, r: r }); }); });
+      });
       weak.sort(function (a, b) { return a.r.pct - b.r.pct; });
-      var pending = TRK_ORDER.filter(function (m) { return TRK[m.id] && TRK[m.id].status !== "ready"; });
+      var none = TRK_ORDER.filter(function (m) { return stats[m.id] && stats[m.id].E.source === "none"; });
       return [
+        h("div", { class: "trk-head" }, modeBar()),
         h("div", { class: "tiles" }, tiles),
-        pending.length ? note([h("b", { text: "Awaiting backups: " }), pending.map(function (m) { return m.short; }).join(", ") + ". Open each page for the two-minute steps — the checklists are already loaded."]) : null,
+        none.length ? note([h("b", { text: "No entries yet: " }), none.map(function (m) { return m.short; }).join(", ") + ". Open a tracker and use Update entity report, or restore a backup from Ritu's tracker."]) : null,
         h("div", { class: "grid g-21" },
           card({ title: "Entity scorecard", hint: "Overall compliance per tracker · click a column to open it", body: [h("div", { class: "tscroll" }, h("table", { class: "t heat tmatrix" }, h("thead", null, head), h("tbody", null, rows))), tierLegend()] }),
           card({ title: "Needs attention", hint: "Categories below 70%, weakest first", body: weak.length ? h("div", { class: "attn" }, weak.slice(0, 8).map(function (w) {
-            return h("div", { class: "attn-row" }, h("span", { class: "ico critical", text: "!" }), h("div", null, h("div", { class: "t", text: entLabel(w.r.e) + " · " + w.t.categories[w.r.ci].title }), h("div", { class: "d", text: w.m.short + " — " + w.r.pct + "% (" + w.r.no + " non-compliant)" })), h("a", { href: "#/" + w.m.route, text: "Open →" }));
-          })) : empty(pending.length === TRK_ORDER.length ? "No tracker data yet" : "Nothing below 70%", pending.length === TRK_ORDER.length ? "Appears once Ritu's backups are loaded." : "") }))
+            return h("div", { class: "attn-row" }, h("span", { class: "ico critical", text: "!" }), h("div", null, h("div", { class: "t", text: entLabel(w.e) + " · " + w.t.categories[w.ci].title }), h("div", { class: "d", text: w.m.short + " — " + w.r.pct + "% (" + flagWord(w.m.id, w.r.no) + ")" })),
+              h("a", { href: "#/" + w.m.route, onclick: function () { ED.view[w.m.id] = "editor"; ED.entity[w.m.id] = w.e; }, text: "Fix →" }));
+          })) : empty(none.length === TRK_ORDER.length ? "No tracker data yet" : "Nothing below 70%", "") }))
       ];
     }
   });
   TRK_ORDER.forEach(function (m) {
     var t = TRK[m.id];
     view({
-      id: m.route, sec: "compliance", title: t ? t.title : m.short, tag: t && t.status !== "ready" ? "pending" : null,
+      id: m.route, sec: "compliance", title: t ? t.title : m.short,
       lede: {
         labour: "Code on Wages, Industrial Relations, Social Security and OSH — plus licences, policies, committees, registers and displays.",
         posh: "Policy, Internal Committee, training, complaints, inquiry, records, student safety and audit — reviewed monthly.",

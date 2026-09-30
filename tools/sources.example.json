@@ -1,14 +1,12 @@
 {
   "_comment": "Copy to tools/sources.json (git-ignored) and adjust. Passwords are read from environment variables, never stored here.",
   "odbc_driver": "ODBC Driver 17 for SQL Server",
-
   "nucleus_v1": {
     "campus": "FSK",
     "server": "localhost\\MSSQLSERVER2022",
     "database": "INVENTORY.MDF",
     "trusted_connection": true
   },
-
   "nucleus_edu": {
     "server": "YOUR-EDU-SQL-HOST",
     "user": "readonly_user",
@@ -21,5 +19,10 @@
       "FALH": "FALHERPDB",
       "FWGS": "FWGSERPDB"
     }
+  },
+  "tracker_api": {
+    "_comment": "Optional: publish compliance % straight from the shared tracker API (server/). Token from the API's login, kept in an env var.",
+    "url": "https://YOUR-HR-API/api",
+    "token_env": "HR_TRACKER_API_TOKEN"
   }
 }

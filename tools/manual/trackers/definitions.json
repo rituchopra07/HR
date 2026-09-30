@@ -487,59 +487,141 @@
       "categories": [
         {
           "title": "1. Attendance",
-          "item_count": 6
+          "items": [
+            "Send reminder to Nayna to check the Exit Pass report (due 5th)",
+            "Attendance email to all staff — 1st reminder for Staff/Support Staff to check attendance for the month (due 10th)",
+            "Reminder for attendance — send to staff via Nucleus - data for those with pending HRIS applications/approvals (due 10th)",
+            "Lock system to process payroll (due 20th)",
+            "Pull LOP report for Staff/Support Staff (due 24th)",
+            "Security and Gardener attendance"
+          ]
         },
         {
           "title": "2. Employee Details Checklist",
-          "item_count": 8
+          "items": [
+            "Bank account opening",
+            "Bank account updating in Nucleus",
+            "Bank account updating in GreyHR",
+            "Introduce new employee in Grey Software as per legal entity",
+            "Upload new employee salary structure in Grey Software as per legal entity",
+            "Protego employee: new joinee with salary less than ₹21,000 — check ESIC eligibility",
+            "Resign staff/support staff from Grey Software as per legal entity",
+            "Upload working days as per legal entity"
+          ]
         },
         {
           "title": "3.1 Maternity Leave (ML) Cases",
-          "item_count": 4
+          "items": [
+            "Employees who will receive ML salary along with the regular payroll cycle",
+            "Employees whose ML salary will be generated but not deposited",
+            "Employees who have rejoined after ML — hold ML installments to be released along with salary as per attendance",
+            "New ML cases added"
+          ]
         },
         {
           "title": "3.3 New Joiners",
-          "item_count": 4
+          "items": [
+            "Stop salary for new joinee teachers who have not completed training",
+            "Define new joinees' working days",
+            "Full salary for the month — as per data provided by PCs",
+            "Trainee teachers on fixed salary — confirm start month"
+          ]
         },
         {
           "title": "3.4 Resignation",
-          "item_count": 1
+          "items": [
+            "Employees on notice period with dues/pending salary — hold, pending confirmation with Principal"
+          ]
         },
         {
           "title": "3.5 Interns (if any)",
-          "item_count": 1
+          "items": [
+            "Check attendance from respective TL and print invoice accordingly"
+          ]
         },
         {
           "title": "4. Teacher Training Incentive (applies to FS Report and PSLLP Report)",
-          "item_count": 5
+          "items": [
+            "Check all new trainees are added to the month-wise training incentive report",
+            "Follow up with TCs to enter incentive % and salary update for the previous month",
+            "Update salary percentage and effective date",
+            "Verify the generated Incentive Report Payroll against the month-wise Incentive Percentage tab",
+            "Verify the generated Incentive working in the Non-Salary Processing file against the Incentive Report Payroll"
+          ]
         },
         {
           "title": "5. FS Report Checklist",
-          "item_count": 5
+          "items": [
+            "New joinee details",
+            "Resigned employee details",
+            "Hold salary details",
+            "Stop salary details",
+            "Teacher Training Incentive — see Section 4"
+          ]
         },
         {
           "title": "6. PSLLP Report Checklist",
-          "item_count": 6
+          "items": [
+            "New joinee details",
+            "Resigned employee details",
+            "Hold salary details",
+            "Stop salary details",
+            "Teacher Training Incentive — see Section 4",
+            "Refer to the \"Need to Check\" sheet to confirm all scenarios are covered"
+          ]
         },
         {
           "title": "7. GPA and PF Checklist",
-          "item_count": 4
+          "items": [
+            "Send mail to generate UAN and PF account number for Support Staff who joined in the current month",
+            "Update the UAN and PF account number in Nucleus",
+            "Update the UAN and PF account number in Payroll",
+            "Mail GPA data for all Staff who joined in the current month, as per legal entity"
+          ]
         },
         {
           "title": "8. Referral Data Checkpoints",
-          "item_count": 5
+          "items": [
+            "Check referral details — 6 months completed? Actually referred by the referee?",
+            "Check the new candidate's employee code",
+            "Check the referee's employee code",
+            "Confirm payment status is \"No\" before processing Pre-ENET data",
+            "Check the entry in the Referral Manual Maternity Holdback Working tab"
+          ]
         },
         {
           "title": "9. Compensation Claim Checklist",
-          "item_count": 6
+          "items": [
+            "Verify the processed responses for the current month in the New Compensation Claim Responses sheet",
+            "Check that all responses are approved",
+            "Verify the generated Compensation Working tab in the Non-Salary Processing File against the New Compensation Claim Responses sheet",
+            "Confirm admin training amount to be given",
+            "Add held-back percentage to the sheet",
+            "Add release percentage to the sheet"
+          ]
         },
         {
           "title": "10. Final Step — Visiting Faculty (VF) Salary Checklist",
-          "item_count": 3
+          "items": [
+            "Update attendance",
+            "Process payment as per number of sessions sent in mail",
+            "Send mail for attendance approval: Bharatkumar Vashi, Sumeet Shah, Retired employees on service agreement"
+          ]
         },
         {
           "title": "Check the following in the Visiting Faculty Invoice Format 2024-25:",
-          "item_count": 10
+          "items": [
+            "Employee Code",
+            "Name of the employee",
+            "Salary month",
+            "Academic Year (AY)",
+            "Number of sessions",
+            "Check the calculation and cross-check the generated amount",
+            "Check the salary month & year for generating the bill; verify hardcopy of bills generated",
+            "Confirm all bills are duly signed before submission to Accounts department",
+            "Propel Racquet Academy bill for March — received",
+            "Propel Racquet Academy bill for March — checked and submitted to Accounts"
+          ]
         }
       ]
     },

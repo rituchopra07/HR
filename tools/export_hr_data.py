@@ -511,7 +511,18 @@ def _cat_pct(statuses, st):
             "pct": round(yes / (yes + no) * 100) if yes + no else None}
 
 
-def build_trackers(notes, publish_items=False):
+def _api_bundle(api, tid):
+    """Backup bundle for one tracker from the shared tracker API (server/), or None."""
+    import urllib.request
+    token = os.environ.get(api.get("token_env", "HR_TRACKER_API_TOKEN"), "")
+    if not api.get("url") or not token:
+        return None
+    req = urllib.request.Request(api["url"].rstrip("/") + f"/trackers/{tid}/backup", headers={"Authorization": "Bearer " + token})
+    with urllib.request.urlopen(req, timeout=30) as r:
+        return json.loads(r.read().decode("utf-8"))
+
+
+def build_trackers(notes, publish_items=False, api=None):
     """Aggregate Ritu's tracker backups the way her dashboard does:
     category % = C / (C + NC) on each item's latest status; entity % = mean of category %s.
     Published: percentages and counts only — no remarks, no 'updated by', item statuses only if publish_items."""
@@ -519,17 +530,27 @@ def build_trackers(notes, publish_items=False):
         return None
     defs = json.loads(TRACKER_DEFS.read_text(encoding="utf-8"))
     keymap = defs.get("entity_keys", {})               # portal code -> key used inside the backup
-    out = {"source": defs.get("source"), "trackers": {}}
+    out = {"source": defs.get("source"), "entity_keys": keymap, "trackers": {}}
     for tid, t in defs["trackers"].items():
         cats = t["categories"]
         sizes = [len(c["items"]) if "items" in c else c["item_count"] for c in cats]
         pub = {"title": t["title"], "entities": t["entities"], "periods": t.get("periods"),
+               # what the portal's editor needs to read/write the same documents as Ritu's tracker
+               "statuses": t["statuses"], "latest": t.get("latest", "last"), "backup_prefix": t["backup_prefix"],
                "categories": [{"title": c["title"], "n": n, **({"items": c["items"]} if "items" in c else {})}
                               for c, n in zip(cats, sizes)],
                "status": "pending", "as_of": None, "rows": [], "overall": {}, "flagged": {}, "trend": []}
+        # source: the shared tracker API when configured, else the newest backup file
+        raw, label = None, None
+        if api:
+            try:
+                raw, label = _api_bundle(api, tid), "shared database"
+            except Exception as e:  # noqa: BLE001 — fall back to files, but say so
+                notes.append(f"{t['title']}: tracker API unavailable ({e}); used backup files.")
         files = sorted(TRACKER_BACKUPS.glob(t["backup_prefix"] + "*.json")) if TRACKER_BACKUPS.exists() else []
-        if files:
-            raw = json.loads(files[-1].read_text(encoding="utf-8"))
+        if raw is None and files:
+            raw, label = json.loads(files[-1].read_text(encoding="utf-8")), files[-1].name
+        if raw is not None:
             ents = raw.get("entities", {})
             stamps = []
             for e in t["entities"]:
@@ -561,7 +582,7 @@ def build_trackers(notes, publish_items=False):
                         pub["trend"].append({"e": e, "p": p, "pct": round(sum(per) / len(per))})
             pub["status"] = "ready" if pub["rows"] else "pending"
             pub["as_of"] = max(stamps) if stamps else (raw.get("exportedAt") or "")[:10] or None
-            print(f"  tracker {tid}: {files[-1].name} ({len(pub['overall'])} entities)")
+            print(f"  tracker {tid}: {label} ({len(pub['overall'])} entities)")
         else:
             notes.append(f"{t['title']}: no backup yet — save the tab's JSON backup into tools/private/trackers/.")
         out["trackers"][tid] = pub
@@ -646,7 +667,7 @@ def main():
         "campuses": CAMPUSES, "employers": EMPLOYERS, "groups": GROUPS,
         **out,
         "reference": manual.get("reference", {}).get("headcount_reference"),
-        "compliance": build_trackers(facts["notes"], bool(cfg.get("publish_tracker_items"))),
+        "compliance": build_trackers(facts["notes"], bool(cfg.get("publish_tracker_items")), cfg.get("tracker_api")),
     }
 
     OUT_PATH.parent.mkdir(parents=True, exist_ok=True)

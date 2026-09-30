@@ -9,4 +9,9 @@ dist/
 tools/sources.json
 # raw compliance tracker backups (item-level statuses, remarks, names) — only aggregates are published
 tools/private/
+
+# tracker API: users (password hashes), stored tracker documents, secrets
+server/.env
+server/data/hr-users.json
+server/data/trackers/
 __pycache__/
