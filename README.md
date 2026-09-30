@@ -118,8 +118,20 @@ the websites project use). SQL Server is also supported.
    node scripts/add-user.js --list                 # --disable <email> / --enable <email>; --import moves hr-users.json in
    ```
    Disabling someone stops their open session within a minute. People are disabled, never deleted.
-5. Deploy the server over **HTTPS** (e.g. a Railway service), then set `trackerApi` in `design/assets/config.js`
-   to `https://<host>/api`.
+5. Deploy the server over **HTTPS**. Railway: the repo root has `railway.json`, which builds `server/Dockerfile`
+   (only the API, its CA certificate and the checklist definitions go in; `.railwayignore` keeps secrets and
+   local data out). From the repo root:
+   ```bash
+   npm i -g @railway/cli
+   railway login
+   railway init --name hr-portal-api
+   railway up
+   railway domain
+   ```
+   Set the variables in Railway (service → Variables → Raw Editor): `NODE_ENV=production`, a **new**
+   `HR_JWT_SECRET`, `HR_ALLOWED_ORIGINS=https://rituchopra07.github.io` and the database settings from step 3.
+   Pick the Singapore region (nearest to Supabase Mumbai). In production the employee CRUD prototype is off.
+   Then set `trackerApi` in `design/assets/config.js` to `https://<host>/api`.
 6. Optional: set `tracker_api` in `tools/sources.json` so the exporter publishes % straight from the database.
 
 SQL Server instead: run `server/sql/001_hr_trackers.sql` and set `HR_TRACKER_STORE=mssql` with the `HR_DB_*` settings.

@@ -25,14 +25,25 @@ app.use(cors({
   maxAge: 600,
 }));
 app.use(express.json({ limit: "1mb" }));
+app.use((req, res, next) => {
+  res.set({ "X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer", "Cache-Control": "no-store" });
+  if (req.secure) res.set("Strict-Transport-Security", "max-age=31536000");
+  next();
+});
 
-app.use("/api/employees", employeesRouter);
+// The employee CRUD prototype (client/) has no sign-in, so it only runs locally unless explicitly switched on.
+const EMPLOYEES_PROTOTYPE = process.env.HR_EMPLOYEES_PROTOTYPE
+  ? process.env.HR_EMPLOYEES_PROTOTYPE === "on"
+  : process.env.NODE_ENV !== "production";
+if (EMPLOYEES_PROTOTYPE) app.use("/api/employees", employeesRouter);
 app.use("/api/auth", authRouter);
 app.use("/api/trackers", trackersRouter);
 
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok" });
 });
+
+app.use("/api", (req, res) => res.status(404).json({ error: "Not found" }));
 
 // never leak stack traces or connection details to the browser
 app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
@@ -41,5 +52,5 @@ app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
 });
 
 app.listen(PORT, () => {
-  console.log(`HR server running at http://localhost:${PORT}`);
+  console.log(`HR server running on port ${PORT} (trackers: ${process.env.HR_TRACKER_STORE || "file"}${EMPLOYEES_PROTOTYPE ? ", employees prototype on" : ""})`);
 });

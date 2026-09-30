@@ -1,0 +1,12 @@
+# Kept out of the Docker build context (same list as .railwayignore).
+.env
+.env.*
+**/.env
+**/.env.*
+!**/.env.example
+tools/sources.json
+tools/private/
+server/data/
+**/node_modules/
+client/
+design/

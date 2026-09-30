@@ -15,3 +15,7 @@ server/.env
 server/data/hr-users.json
 server/data/trackers/
 __pycache__/
+
+# local copies of secrets (e.g. variables prepared for the host)
+server/.env.*
+!server/.env.example

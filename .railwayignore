@@ -1,0 +1,12 @@
+# Files never uploaded to Railway (on top of .gitignore). Secrets are Railway variables, not files.
+.env
+.env.*
+**/.env
+**/.env.*
+!**/.env.example
+tools/sources.json
+tools/private/
+server/data/
+**/node_modules/
+client/
+design/
